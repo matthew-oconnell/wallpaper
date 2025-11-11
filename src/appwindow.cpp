@@ -28,6 +28,8 @@
 #include <QCheckBox>
 #include <QGuiApplication>
 #include <QScreen>
+#include <QImageReader>
+#include <QImage>
 
 // Worker object to perform subreddit scanning & downloading in a background thread.
 class UpdateWorker : public QObject {
@@ -58,6 +60,10 @@ signals:
 private:
     QStringList subs_;
 };
+
+// forward declarations for helpers defined later in this file
+static QJsonObject readIndex(const QString &indexPath);
+static bool writeIndex(const QString &indexPath, const QJsonObject &rootObj);
 
 
 AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
@@ -203,37 +209,83 @@ AppWindow::~AppWindow() {
 }
 
 void AppWindow::onNewRandom() {
-    qDebug() << "Fetching new random wallpaper...";
-    
-    // Fetch image URLs from Reddit
-    std::vector<std::string> urls = m_fetcher.fetchRecentImageUrls("WidescreenWallpaper", 10);
-    
-    if (urls.empty()) {
-        qWarning() << "No image URLs found";
+    qDebug() << "Selecting a new random wallpaper from cache...";
+
+    QString cacheDir = m_cache.cacheDirPath();
+    QDir dir(cacheDir);
+    if (!dir.exists()) {
+        qWarning() << "Cache directory does not exist:" << cacheDir;
         return;
     }
-    
-    // Pick a random URL
-    int randomIndex = QRandomGenerator::global()->bounded(static_cast<int>(urls.size()));
-    QString selectedUrl = QString::fromStdString(urls[randomIndex]);
-    
-    qDebug() << "Selected URL:" << selectedUrl;
-    
-    // Download and cache the image
-    QString cachedPath = m_cache.downloadAndCache(selectedUrl);
-    
-    if (cachedPath.isEmpty()) {
-        qWarning() << "Failed to download image";
+
+    // Load index.json metadata
+    QString indexPath = cacheDir + "/index.json";
+    QJsonObject index = readIndex(indexPath);
+
+    // Gather candidate images with weights
+    QStringList nameFilters;
+    nameFilters << "*.png" << "*.jpg" << "*.jpeg" << "*.bmp" << "*.webp" << "*.gif";
+    QFileInfoList files = dir.entryInfoList(nameFilters, QDir::Files);
+
+    // compute primary aspect if filter enabled
+    bool filterAspect = chkFilterAspect_ ? chkFilterAspect_->isChecked() : false;
+    QScreen *screen = QGuiApplication::primaryScreen();
+    QSize scrSize = screen ? screen->size() : QSize(1920,1080);
+    double primaryAspect = double(scrSize.width()) / double(scrSize.height());
+
+    struct Candidate { QString path; double weight; };
+    QVector<Candidate> candidates;
+    double totalWeight = 0.0;
+
+    for (const QFileInfo &fi : files) {
+        QString path = fi.absoluteFilePath();
+        QString key = fi.fileName();
+        QJsonObject entry = index.value(key).toObject();
+        bool banned = entry.value("banned").toBool(false);
+        if (banned) continue;
+
+        // aspect filter
+        if (filterAspect) {
+            QImageReader r(path);
+            QSize sz = r.size();
+            if (sz.isEmpty()) {
+                QImage img(path);
+                if (img.isNull()) continue;
+                sz = img.size();
+            }
+            double ar = double(sz.width()) / double(sz.height());
+            if (qAbs(ar - primaryAspect) > 0.03) continue; // skip non-matching
+        }
+
+        int score = entry.value("score").toInt(0);
+        // weight: base 1, plus positive score bonus (negative scores not helpful)
+        double weight = 1.0 + std::max(0, score);
+        candidates.append({ path, weight });
+        totalWeight += weight;
+    }
+
+    if (candidates.empty()) {
+        qWarning() << "No candidate wallpapers found in cache (after filters).";
         return;
     }
-    
-    qDebug() << "Image cached at:" << cachedPath;
-    
-    // Set the wallpaper using the cached image
-    if (wallpaperSetter_.setWallpaper(cachedPath)) {
-        qDebug() << "Wallpaper set successfully!";
+
+    // weighted random selection
+    double r = QRandomGenerator::global()->generateDouble() * totalWeight;
+    QString chosen;
+    double acc = 0.0;
+    for (const Candidate &c : candidates) {
+        acc += c.weight;
+        if (r <= acc) { chosen = c.path; break; }
+    }
+    if (chosen.isEmpty()) chosen = candidates.last().path;
+
+    qDebug() << "Chosen wallpaper from cache:" << chosen;
+    if (wallpaperSetter_.setWallpaper(chosen)) {
+        qDebug() << "Wallpaper set successfully from cache";
+        // update UI/details for the chosen image
+        onThumbnailSelected(chosen);
     } else {
-        qWarning() << "Failed to set wallpaper";
+        qWarning() << "Failed to set wallpaper from cache:" << chosen;
     }
 }
 
