@@ -31,11 +31,15 @@ private slots:
 
 private:
     QSystemTrayIcon *trayIcon_ = nullptr;
+    QAction *trayActThumbUp_ = nullptr;
+    QAction *trayActThumbDown_ = nullptr;
+    QAction *trayActPermaban_ = nullptr;
     WallpaperSetter wallpaperSetter_;
     RedditFetcher m_fetcher;
     CacheManager m_cache;
     ThumbnailViewer *thumbnailViewer_ = nullptr;
     QString currentSelectedPath_;
+    QString currentWallpaperPath_;
     QStringList subscribedSubreddits_ = { "WidescreenWallpaper" };
     QPushButton *btnUpdate_ = nullptr;
     SourcesPanel *sourcesPanel_ = nullptr;

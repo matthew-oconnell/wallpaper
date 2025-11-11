@@ -5,6 +5,8 @@
 #include <QMenu>
 #include <QSystemTrayIcon>
 #include <QAction>
+#include <QPixmap>
+#include <QPainter>
 #include <QVBoxLayout>
 #include <QPushButton>
 #include <QLabel>
@@ -69,6 +71,22 @@ private:
 static QJsonObject readIndex(const QString &indexPath);
 static bool writeIndex(const QString &indexPath, const QJsonObject &rootObj);
 
+// Render a single emoji into a QIcon for use in the tray. This keeps the icon
+// visually consistent across desktops without adding resource files.
+static QIcon createEmojiIcon(const QString &emoji, int size = 32) {
+    QPixmap px(size, size);
+    px.fill(Qt::transparent);
+    QPainter p(&px);
+    QFont f = QApplication::font();
+    // Choose a reasonably large point size for the pixmap size.
+    f.setPointSizeF(size * 0.6);
+    p.setFont(f);
+    p.setPen(Qt::black);
+    p.drawText(px.rect(), Qt::AlignCenter, emoji);
+    p.end();
+    return QIcon(px);
+}
+
 
 AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     setWindowTitle("Wallpaper C++");
@@ -80,7 +98,7 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     QLabel *label = new QLabel("Subreddit: r/WidescreenWallpaper", this);
     qDebug() << "AppWindow ctor: created label";
     l->addWidget(label);
-    QPushButton *btn = new QPushButton("New Random Wallpaper", this);
+    QPushButton *btn = new QPushButton("🎲 New Random Wallpaper", this);
     qDebug() << "AppWindow ctor: created New Random button";
     connect(btn, &QPushButton::clicked, this, &AppWindow::onNewRandom);
     l->addWidget(btn);
@@ -202,6 +220,12 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
         qDebug() << "Thumbnail activated (double-click):" << imagePath;
         if (wallpaperSetter_.setWallpaper(imagePath)) {
             qDebug() << "Wallpaper set from thumbnail activation:" << imagePath;
+            // record currently-set wallpaper
+            currentWallpaperPath_ = imagePath;
+            // Update tray actions enabled state now that we have a current wallpaper
+            if (trayActThumbUp_) trayActThumbUp_->setEnabled(true);
+            if (trayActThumbDown_) trayActThumbDown_->setEnabled(true);
+            if (trayActPermaban_) trayActPermaban_->setEnabled(true);
         } else {
             qWarning() << "Failed to set wallpaper for" << imagePath;
         }
@@ -239,11 +263,30 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     qDebug() << "AppWindow ctor: connected detail buttons";
 
     // tray
-    trayIcon_ = new QSystemTrayIcon(QIcon::fromTheme("image-x-generic"), this);
+    // Use a dice emoji as the tray icon
+    trayIcon_ = new QSystemTrayIcon(createEmojiIcon(QString::fromUtf8("🎲")), this);
     QMenu *menu = new QMenu();
-    QAction *actNew = new QAction("New Random Wallpaper", this);
+    QAction *actNew = new QAction("🎲 New Random Wallpaper", this);
     connect(actNew, &QAction::triggered, this, &AppWindow::onNewRandom);
     menu->addAction(actNew);
+    // tray actions for quick votes/ban
+    QAction *actThumbUp = new QAction("👍 Current Wallpaper", this);
+    connect(actThumbUp, &QAction::triggered, this, &AppWindow::onThumbUp);
+    actThumbUp->setEnabled(false);
+    menu->addAction(actThumbUp);
+    trayActThumbUp_ = actThumbUp;
+
+    QAction *actThumbDown = new QAction("👎 Current Wallpaper", this);
+    connect(actThumbDown, &QAction::triggered, this, &AppWindow::onThumbDown);
+    actThumbDown->setEnabled(false);
+    menu->addAction(actThumbDown);
+    trayActThumbDown_ = actThumbDown;
+
+    QAction *actPermaban = new QAction("💀 Perma-Ban Current Wallpaper", this);
+    connect(actPermaban, &QAction::triggered, this, &AppWindow::onPermaban);
+    actPermaban->setEnabled(false);
+    menu->addAction(actPermaban);
+    trayActPermaban_ = actPermaban;
     QAction *actQuit = new QAction("Quit", this);
     connect(actQuit, &QAction::triggered, QApplication::instance(), &QApplication::quit);
     menu->addSeparator();
@@ -346,6 +389,11 @@ void AppWindow::onNewRandom() {
         qDebug() << "Wallpaper set successfully from cache";
         // update UI/details for the chosen image
         onThumbnailSelected(chosen);
+        // record currently-set wallpaper so tray actions operate on it
+        currentWallpaperPath_ = chosen;
+        if (trayActThumbUp_) trayActThumbUp_->setEnabled(true);
+        if (trayActThumbDown_) trayActThumbDown_->setEnabled(true);
+        if (trayActPermaban_) trayActPermaban_->setEnabled(true);
     } else {
         qWarning() << "Failed to set wallpaper from cache:" << chosen;
     }
@@ -385,6 +433,12 @@ void AppWindow::onThumbnailSelected(const QString &imagePath) {
     detailBanned_->setText(QString("Banned: %1").arg(banned ? "true" : "false"));
     
     // Optionally set wallpaper on click? We'll not auto-set; keep manual behavior.
+
+    // Enable/disable tray actions based on whether we have a current wallpaper
+    bool hasCurrent = !currentWallpaperPath_.isEmpty();
+    if (trayActThumbUp_) trayActThumbUp_->setEnabled(hasCurrent);
+    if (trayActThumbDown_) trayActThumbDown_->setEnabled(hasCurrent);
+    if (trayActPermaban_) trayActPermaban_->setEnabled(hasCurrent);
 }
 
 static QJsonObject readIndex(const QString &indexPath) {
@@ -406,8 +460,9 @@ static bool writeIndex(const QString &indexPath, const QJsonObject &rootObj) {
 }
 
 void AppWindow::onThumbUp() {
-    if (currentSelectedPath_.isEmpty()) return;
-    QString key = QFileInfo(currentSelectedPath_).fileName();
+    // operate on the currently-set wallpaper
+    if (currentWallpaperPath_.isEmpty()) return;
+    QString key = QFileInfo(currentWallpaperPath_).fileName();
     QString indexPath = m_cache.cacheDirPath() + "/index.json";
     QJsonObject root = readIndex(indexPath);
 
@@ -431,8 +486,9 @@ void AppWindow::onThumbUp() {
 }
 
 void AppWindow::onThumbDown() {
-    if (currentSelectedPath_.isEmpty()) return;
-    QString key = QFileInfo(currentSelectedPath_).fileName();
+    // operate on the currently-set wallpaper
+    if (currentWallpaperPath_.isEmpty()) return;
+    QString key = QFileInfo(currentWallpaperPath_).fileName();
     QString indexPath = m_cache.cacheDirPath() + "/index.json";
     QJsonObject root = readIndex(indexPath);
     QJsonObject entry = root.value(key).toObject();
@@ -449,8 +505,9 @@ void AppWindow::onThumbDown() {
 }
 
 void AppWindow::onPermaban() {
-    if (currentSelectedPath_.isEmpty()) return;
-    QString key = QFileInfo(currentSelectedPath_).fileName();
+    // operate on the currently-set wallpaper
+    if (currentWallpaperPath_.isEmpty()) return;
+    QString key = QFileInfo(currentWallpaperPath_).fileName();
     QString indexPath = m_cache.cacheDirPath() + "/index.json";
     QJsonObject root = readIndex(indexPath);
     QJsonObject entry = root.value(key).toObject();
