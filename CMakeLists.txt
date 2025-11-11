@@ -9,8 +9,6 @@ set(CMAKE_AUTOUIC ON)
 
 find_package(Qt6 COMPONENTS Widgets Network Core Gui REQUIRED)
 
-include(FetchContent)
-
 add_executable(wallpaper-cpp
   src/main.cpp
   src/appwindow.h
@@ -21,10 +19,9 @@ add_executable(wallpaper-cpp
   src/redditfetcher.cpp
   src/wallpapersetter.h
   src/wallpapersetter.cpp
+  src/thumbnailviewer.h
+  src/thumbnailviewer.cpp
 )
-
-target_include_directories(wallpaper-cpp PRIVATE ${parsec_SOURCE_DIR}/include)
-
 target_link_libraries(wallpaper-cpp PRIVATE Qt6::Widgets Qt6::Network Qt6::Core Qt6::Gui)
 
 install(TARGETS wallpaper-cpp RUNTIME DESTINATION bin)

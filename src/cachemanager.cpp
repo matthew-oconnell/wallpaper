@@ -9,6 +9,7 @@
 #include <QEventLoop>
 #include <QCryptographicHash>
 #include <QDebug>
+#include <QRandomGenerator>
 
 QString CacheManager::downloadAndCache(const QString &url) {
     // Use the same cache directory as the Python app (~/.cache/wallpaper)
@@ -21,6 +22,9 @@ QString CacheManager::downloadAndCache(const QString &url) {
         QDir().mkpath(cacheBase);
     }
     QDir dir(cacheBase);
+
+    // store cacheBase for callers
+    // Note: we don't keep state in this simple manager, so cacheDirPath() will compute the same value
 
     // base filename from URL
     QString name = url.section('/', -1);
@@ -67,4 +71,24 @@ QString CacheManager::downloadAndCache(const QString &url) {
     f.close();
     qDebug() << "Saved to:" << outPath;
     return outPath;
+}
+
+QString CacheManager::cacheDirPath() const {
+    QString cacheBase = QDir::homePath() + "/.cache/wallpaper";
+    if (!QDir().exists(cacheBase)) {
+        QDir().mkpath(cacheBase);
+    }
+    return cacheBase;
+}
+
+QString CacheManager::randomImagePath() const {
+    QString cacheBase = cacheDirPath();
+    QDir dir(cacheBase);
+    if (!dir.exists()) return QString();
+    QStringList nameFilters;
+    nameFilters << "*.png" << "*.jpg" << "*.jpeg" << "*.bmp" << "*.webp" << "*.gif";
+    QFileInfoList files = dir.entryInfoList(nameFilters, QDir::Files);
+    if (files.isEmpty()) return QString();
+    int idx = QRandomGenerator::global()->bounded(files.size());
+    return files.at(idx).absoluteFilePath();
 }

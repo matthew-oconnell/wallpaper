@@ -11,10 +11,11 @@
 #include <QRandomGenerator>
 #include "redditfetcher.h"
 #include "cachemanager.h"
+#include "thumbnailviewer.h"
 
 AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     setWindowTitle("Wallpaper C++");
-    resize(320, 120);
+    resize(900, 600);
 
     QVBoxLayout *l = new QVBoxLayout(this);
     QLabel *label = new QLabel("Subreddit: r/WidescreenWallpaper", this);
@@ -22,6 +23,14 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     QPushButton *btn = new QPushButton("New Random Wallpaper", this);
     connect(btn, &QPushButton::clicked, this, &AppWindow::onNewRandom);
     l->addWidget(btn);
+
+    // thumbnail viewer
+    thumbnailViewer_ = new ThumbnailViewer(this);
+    thumbnailViewer_->setMinimumHeight(300);
+    l->addWidget(thumbnailViewer_, 1);
+    // load thumbnails from cache
+    thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
+    connect(thumbnailViewer_, &ThumbnailViewer::imageSelected, this, &AppWindow::onThumbnailSelected);
 
     // tray
     trayIcon_ = new QSystemTrayIcon(QIcon::fromTheme("image-x-generic"), this);
@@ -72,5 +81,17 @@ void AppWindow::onNewRandom() {
         qDebug() << "Wallpaper set successfully!";
     } else {
         qWarning() << "Failed to set wallpaper";
+    }
+}
+
+void AppWindow::onThumbnailSelected(const QString &imagePath) {
+    qDebug() << "Thumbnail selected:" << imagePath;
+    // Immediately set wallpaper when thumbnail clicked for now
+    if (!imagePath.isEmpty()) {
+        if (wallpaperSetter_.setWallpaper(imagePath)) {
+            qDebug() << "Set wallpaper from thumbnail:" << imagePath;
+        } else {
+            qWarning() << "Failed to set wallpaper from thumbnail:" << imagePath;
+        }
     }
 }
