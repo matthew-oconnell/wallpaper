@@ -246,7 +246,8 @@ void ThumbnailViewer::loadFromCache(const QString &cacheDir)
     }
 
     // adjust container layout
-    m_container->adjustSize();
+    // Keep container size stable; individual thumbnail labels use a fixed cell size
+    // so adding images won't cause the window to jump.
     qDebug() << "ThumbnailViewer::loadFromCache: scanned=" << scanned << "accepted=" << accepted << "thumbs=" << m_labels.size() << "ms=" << timer.elapsed();
 }
 
@@ -289,8 +290,10 @@ void ThumbnailViewer::onThumbnailLoaded(const QString &filePath, const QImage &i
         QString existing = p.toString();
         if (existing == filePath) {
             QPixmap pm = QPixmap::fromImage(img);
-            l->setPixmap(pm);
-            l->setFixedSize(pm.size());
+            // keep the label's fixed size (m_thumbSize) so the grid cell size is stable
+            QSize target = QSize(m_thumbSize, m_thumbSize);
+            QPixmap pmScaled = pm.scaled(target, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            l->setPixmap(pmScaled);
             l->setText("");
             break;
         }
@@ -321,7 +324,13 @@ ThumbnailViewer::AspectFilterMode ThumbnailViewer::aspectFilterMode() const
 
 void ThumbnailViewer::setAllowedSubreddits(const QStringList &allowed)
 {
-    m_allowedSubreddits = allowed;
+    m_allowedSubreddits.clear();
+    for (const QString &s : allowed) {
+        QString n = s.trimmed();
+        if (n.startsWith("r/", Qt::CaseInsensitive)) n = n.mid(2);
+        n = n.toLower();
+        if (!n.isEmpty()) m_allowedSubreddits.append(n);
+    }
 }
 
 bool ThumbnailViewer::acceptsImage(const QString &filePath) const
@@ -330,35 +339,50 @@ bool ThumbnailViewer::acceptsImage(const QString &filePath) const
     QFileInfo fi(filePath);
     if (!fi.exists() || !fi.isFile()) return false;
 
-    if (m_filterMode == FilterAll) return true;
-
-    // consult in-memory index.json (if loaded) to avoid reading image files
+    // enforce allowed-subreddits first (so subreddit filtering applies regardless of aspect filter)
     QString fname = fi.fileName();
     if (!m_indexJson.isEmpty() && m_indexJson.contains(fname)) {
         QJsonObject entry = m_indexJson.value(fname).toObject();
-        // If allowed-subreddits list is non-empty, enforce it using index metadata
         if (!m_allowedSubreddits.isEmpty()) {
-            QString sr = entry.value("subreddit").toString();
-            if (sr.isEmpty() || !m_allowedSubreddits.contains(sr)) return false;
+            QString sr = entry.value("subreddit").toString().trimmed();
+            if (sr.startsWith("r/", Qt::CaseInsensitive)) sr = sr.mid(2);
+            sr = sr.toLower();
+            if (sr.isEmpty() || !m_allowedSubreddits.contains(sr)) {
+                qDebug() << "ThumbnailViewer: rejecting" << fname << "because subreddit" << sr << "not allowed";
+                return false;
+            }
         }
-        if (entry.contains("width") && entry.contains("height")) {
-            int w = entry.value("width").toInt(0);
-            int h = entry.value("height").toInt(0);
-            if (w <= 0 || h <= 0) return false;
-            double ar = double(w) / double(h);
-            if (m_filterMode == FilterExact) return qAbs(ar - m_targetAspect) <= 0.03;
-            bool primaryHorizontal = m_targetAspect >= 1.0;
-            bool imgHorizontal = w >= h;
-            return primaryHorizontal == imgHorizontal;
+    } else {
+        // If we don't have metadata and an allowlist is configured, reject
+        if (!m_allowedSubreddits.isEmpty()) {
+            qDebug() << "ThumbnailViewer: rejecting" << fname << "because missing subreddit metadata while allowlist active";
+            return false;
         }
     }
 
-    QImageReader r(filePath);
-    QSize sz = r.size();
-    if (sz.isEmpty()) {
-        QImage img(filePath);
-        if (img.isNull()) return false;
-        sz = img.size();
+    // If aspect filtering is disabled, accept (we have already enforced subreddit allowlist above)
+    if (m_filterMode == FilterAll) return true;
+
+    // consult in-memory index.json for size if available to avoid decoding image
+    int w = 0, h = 0;
+    if (!m_indexJson.isEmpty() && m_indexJson.contains(fname)) {
+        QJsonObject entry = m_indexJson.value(fname).toObject();
+        if (entry.contains("width") && entry.contains("height")) {
+            w = entry.value("width").toInt(0);
+            h = entry.value("height").toInt(0);
+        }
+    }
+    QSize sz;
+    if (w > 0 && h > 0) {
+        sz = QSize(w,h);
+    } else {
+        QImageReader r(filePath);
+        sz = r.size();
+        if (sz.isEmpty()) {
+            QImage img(filePath);
+            if (img.isNull()) return false;
+            sz = img.size();
+        }
     }
     if (sz.isEmpty()) return false;
     double ar = double(sz.width()) / double(sz.height());

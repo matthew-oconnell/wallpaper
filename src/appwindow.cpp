@@ -117,6 +117,8 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     }
     l->addWidget(sourcesPanel_);
     qDebug() << "AppWindow ctor: added SourcesPanel to layout";
+    // initialize allowed subreddits on the thumbnail viewer from current sources state
+    // (will be applied after the viewer is created below)
     qDebug() << "AppWindow ctor: about to connect sourcesChanged";
     connect(sourcesPanel_, &SourcesPanel::sourcesChanged, this, [this, sourcesPathConfig](const QStringList &list){
         qDebug() << "AppWindow ctor: inside sourcesChanged lambda";
@@ -125,8 +127,10 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
         sourcesPanel_->saveToFile(sourcesPathConfig);
     });
     // when enabled (checked) list changes, tell the thumbnail viewer to update its allowed set
-    connect(sourcesPanel_, &SourcesPanel::enabledSourcesChanged, this, [this](const QStringList &enabled){
+    connect(sourcesPanel_, &SourcesPanel::enabledSourcesChanged, this, [this, sourcesPathConfig](const QStringList &enabled){
         qDebug() << "AppWindow: enabledSourcesChanged:" << enabled;
+        // persist the enabled/disabled state immediately so it survives restarts
+        sourcesPanel_->saveToFile(sourcesPathConfig);
         thumbnailViewer_->setAllowedSubreddits(enabled);
         thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
     });
@@ -139,6 +143,8 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     thumbnailViewer_ = new ThumbnailViewer(this);
     qDebug() << "AppWindow ctor: created ThumbnailViewer";
     thumbnailViewer_->setMinimumHeight(300);
+    // now apply the current enabled sources to the viewer
+    thumbnailViewer_->setAllowedSubreddits(sourcesPanel_->enabledSources());
     l->addWidget(thumbnailViewer_, 1);
     qDebug() << "AppWindow ctor: added ThumbnailViewer to layout";
     // Filters panel (All / Exact / Rough)
