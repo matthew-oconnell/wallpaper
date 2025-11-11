@@ -108,6 +108,8 @@ AppWindow::AppWindow(QWidget *parent)
     : QWidget(parent)
 {
     qDebug() << "AppWindow ctor: start";
+    // default window size requested by user
+    this->resize(900, 600);
     // ensure config dir path is available for later use
     QString configDir = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/wallpaper";
 
@@ -277,11 +279,9 @@ AppWindow::AppWindow(QWidget *parent)
     detailPath_ = new QLabel("Path: ", detailWidget);
     detailSubreddit_ = new QLabel("Subreddit: unknown", detailWidget);
     detailResolution_ = new QLabel("Resolution: ", detailWidget);
-    detailBanned_ = new QLabel("Banned: false", detailWidget);
     detailLayout->addWidget(detailPath_);
     detailLayout->addWidget(detailSubreddit_);
     detailLayout->addWidget(detailResolution_);
-    detailLayout->addWidget(detailBanned_);
 
     // no inline favorite / permaban buttons in detail panel; actions are available from thumbnail context menu
     l->addWidget(detailWidget);
@@ -531,7 +531,6 @@ void AppWindow::onThumbnailSelected(const QString &imagePath) {
     bool banned = entry.value("banned").toBool(false);
 
     detailSubreddit_->setText(QString("Subreddit: %1").arg(subreddit));
-    detailBanned_->setText(QString("Banned: %1").arg(banned ? "true" : "false"));
     
     // Optionally set wallpaper on click? We'll not auto-set; keep manual behavior.
 
@@ -617,9 +616,6 @@ void AppWindow::onThumbnailPermabanRequested(const QString &imagePath)
     if (writeIndex(indexPath, root)) {
         qDebug() << "Context-permaban set for" << key;
         if (thumbnailViewer_) thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
-        if (currentSelectedPath_.isEmpty() == false && QFileInfo(currentSelectedPath_).fileName() == key) {
-            detailBanned_->setText("Banned: true");
-        }
         // After permabanning, pick a new favorite wallpaper if the permabanned one is current
         if (!currentWallpaperPath_.isEmpty() && QFileInfo(currentWallpaperPath_).fileName() == key) {
             QTimer::singleShot(0, this, [this]() { this->onRandomFavorite(); });
@@ -639,7 +635,6 @@ void AppWindow::onPermaban() {
     entry["banned"] = true;
     root[key] = entry;
     if (writeIndex(indexPath, root)) {
-        detailBanned_->setText("Banned: true");
         qDebug() << "Set perma-ban for" << key;
         // After permabanning the current wallpaper, immediately load a random favorited wallpaper
         QTimer::singleShot(0, this, [this]() { this->onRandomFavorite(); });
