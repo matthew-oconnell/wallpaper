@@ -270,7 +270,10 @@ AppWindow::AppWindow(QWidget *parent)
     autoRow->addWidget(new QLabel("Select a new random wallpaper every", this));
     autoIntervalSpin_ = new QSpinBox(this);
     autoIntervalSpin_->setRange(0, 1000000);
-    autoIntervalSpin_->setValue(0); // 0 means disabled unless unit is changed
+    // load saved auto-interval from config (default to 15 minutes)
+    int savedAuto = cfg.value("auto_interval").toInt(15);
+    QString savedUnit = cfg.value("auto_unit").toString("minutes");
+    autoIntervalSpin_->setValue(savedAuto);
     autoIntervalSpin_->setToolTip("Interval value (0 to disable)");
     autoRow->addWidget(autoIntervalSpin_);
     autoIntervalUnit_ = new QComboBox(this);
@@ -278,7 +281,13 @@ AppWindow::AppWindow(QWidget *parent)
     autoIntervalUnit_->addItem("minutes");
     autoIntervalUnit_->addItem("hours");
     autoIntervalUnit_->addItem("on restart");
-    autoIntervalUnit_->setCurrentIndex(3); // default to "on restart" (disabled)
+    // map saved unit string to combo index
+    int unitIndex = 3;
+    if (savedUnit == "seconds") unitIndex = 0;
+    else if (savedUnit == "minutes") unitIndex = 1;
+    else if (savedUnit == "hours") unitIndex = 2;
+    else unitIndex = 3;
+    autoIntervalUnit_->setCurrentIndex(unitIndex);
     autoRow->addWidget(autoIntervalUnit_);
     leftLayout->addLayout(autoRow);
 
@@ -289,33 +298,47 @@ AppWindow::AppWindow(QWidget *parent)
     autoTimer_->setSingleShot(false);
     connect(autoTimer_, &QTimer::timeout, this, &AppWindow::onNewRandom);
 
-    // helper to update timer whenever controls change
-    auto updateAutoTimer = [this]() {
-        if (!autoIntervalSpin_ || !autoIntervalUnit_) return;
+    // helper to apply and persist timer whenever controls change
+    auto applyAutoSettings = [this, configPath]() {
+        if (!autoIntervalSpin_ || !autoIntervalUnit_ || !autoTimer_) return;
         int val = autoIntervalSpin_->value();
         QString unit = autoIntervalUnit_->currentText();
-        if (unit == "on restart") {
+        if (unit == "on restart" || val <= 0) {
             if (autoTimer_->isActive()) autoTimer_->stop();
-            return;
+        } else {
+            qint64 msec = val;
+            if (unit == "seconds") msec = msec * 1000LL;
+            else if (unit == "minutes") msec = msec * 60LL * 1000LL;
+            else if (unit == "hours") msec = msec * 60LL * 60LL * 1000LL;
+            if (msec > INT_MAX) msec = INT_MAX;
+            int imsec = static_cast<int>(msec);
+            if (autoTimer_->interval() != imsec || !autoTimer_->isActive()) {
+                autoTimer_->stop();
+                autoTimer_->start(imsec);
+            }
         }
-        if (val <= 0) {
-            if (autoTimer_->isActive()) autoTimer_->stop();
-            return;
+        // persist selection atomically
+        QJsonObject newCfg;
+        QFile rcf(configPath);
+        if (rcf.open(QIODevice::ReadOnly)) {
+            QJsonDocument doc = QJsonDocument::fromJson(rcf.readAll());
+            if (doc.isObject()) newCfg = doc.object();
+            rcf.close();
         }
-        qint64 msec = val;
-        if (unit == "seconds") msec = msec * 1000LL;
-        else if (unit == "minutes") msec = msec * 60LL * 1000LL;
-        else if (unit == "hours") msec = msec * 60LL * 60LL * 1000LL;
-        // clamp to int range for QTimer
-        if (msec > INT_MAX) msec = INT_MAX;
-        int imsec = static_cast<int>(msec);
-        if (autoTimer_->interval() != imsec || !autoTimer_->isActive()) {
-            autoTimer_->stop();
-            autoTimer_->start(imsec);
+        newCfg["auto_interval"] = autoIntervalSpin_->value();
+        newCfg["auto_unit"] = autoIntervalUnit_->currentText();
+        QSaveFile sf(configPath);
+        if (sf.open(QIODevice::WriteOnly)) {
+            sf.write(QJsonDocument(newCfg).toJson(QJsonDocument::Indented));
+            sf.commit();
+        } else {
+            qWarning() << "Failed to write config file:" << configPath;
         }
     };
-    connect(autoIntervalSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this, updateAutoTimer);
-    connect(autoIntervalUnit_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, updateAutoTimer);
+    connect(autoIntervalSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this, applyAutoSettings);
+    connect(autoIntervalUnit_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, applyAutoSettings);
+    // apply once at startup to use saved/default values
+    applyAutoSettings();
     // initial load of thumbnails deferred until the window is shown to allow correct layout
     connect(thumbnailViewer_, &ThumbnailViewer::imageSelected, this, &AppWindow::onThumbnailSelected);
     // double-click (activate) should set the wallpaper immediately
@@ -595,7 +618,15 @@ void AppWindow::onRandomFavorite() {
 void AppWindow::onThumbnailSelected(const QString &imagePath) {
     qDebug() << "Thumbnail selected:" << imagePath;
     currentSelectedPath_ = imagePath;
-    detailPath_->setText(QString("Path: %1").arg(imagePath));
+    // Avoid letting extremely long file paths expand the window when
+    // thumbnails are selected programmatically (e.g. auto-rotation).
+    // Elide the displayed path in the label and keep the full path in
+    // the tooltip so users can still copy it if needed.
+    QFontMetrics fm(detailPath_->font());
+    int maxPixels = qMax(200, this->width() / 3); // heuristic width to elide to
+    QString elided = fm.elidedText(imagePath, Qt::ElideMiddle, maxPixels);
+    detailPath_->setText(QString("Path: %1").arg(elided));
+    detailPath_->setToolTip(imagePath);
 
     // resolution
     QImage img(imagePath);
