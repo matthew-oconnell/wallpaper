@@ -6,6 +6,7 @@
 #include <QScrollArea>
 #include <QVector>
 #include <QString>
+#include <QJsonObject>
 
 class ClickableLabel;
 
@@ -13,6 +14,12 @@ class ThumbnailViewer : public QWidget {
     Q_OBJECT
 public:
     explicit ThumbnailViewer(QWidget *parent = nullptr);
+
+    enum AspectFilterMode {
+        FilterAll = 0,
+        FilterExact = 1,
+        FilterRough = 2
+    };
 
     // Load thumbnails from cache directory (e.g. ~/.cache/wallpaper)
     void loadFromCache(const QString &cacheDir);
@@ -36,6 +43,11 @@ public slots:
     // Aspect-ratio filtering: when enabled, only show thumbnails that match the target aspect ratio
     void setFilterAspectRatioEnabled(bool enabled);
     void setTargetAspectRatio(double ratio); // width/height
+    void setAspectFilterMode(AspectFilterMode mode);
+    AspectFilterMode aspectFilterMode() const;
+
+    // Return true if the thumbnail viewer would accept (render/select) this image given current filters
+    bool acceptsImage(const QString &filePath) const;
 
 private:
     void clearGrid();
@@ -46,8 +58,11 @@ private:
     QGridLayout *m_grid;
     QVector<ClickableLabel*> m_labels;
     int m_thumbSize = 200; // pixels
-    bool m_filterAspect = false;
+    AspectFilterMode m_filterMode = FilterAll;
     double m_targetAspect = 16.0/9.0;
+    // cached index.json for the current cache dir (loaded by loadFromCache)
+    QJsonObject m_indexJson;
+    QString m_indexPath;
 };
 
 #endif // THUMBNAILVIEWER_H

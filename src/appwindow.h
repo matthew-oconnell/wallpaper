@@ -6,6 +6,7 @@
 #include "cachemanager.h"
 #include "thumbnailviewer.h"
 #include "sourcespanel.h"
+#include "filterspanel.h"
 
 class QSystemTrayIcon;
 
@@ -38,7 +39,7 @@ private:
     QStringList subscribedSubreddits_ = { "WidescreenWallpaper" };
     QPushButton *btnUpdate_ = nullptr;
     SourcesPanel *sourcesPanel_ = nullptr;
-    QCheckBox *chkFilterAspect_ = nullptr;
+    FiltersPanel *filtersPanel_ = nullptr;
     // detail panel widgets
     QLabel *detailPath_ = nullptr;
     QLabel *detailSubreddit_ = nullptr;

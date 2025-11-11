@@ -9,6 +9,7 @@
 #include <QFileInfo>
 #include <QImageReader>
 #include <QDebug>
+#include <QElapsedTimer>
 
 // Simple clickable QLabel
 class ClickableLabel : public QLabel {
@@ -63,7 +64,16 @@ void ThumbnailViewer::addThumbnail(const QString &filePath, int row, int col)
     label->setScaledContents(false); // we will set a pixmap sized to preserve aspect ratio
 
     QPixmap pmLoaded;
-    if (pmLoaded.load(filePath)) {
+    // Prefer a pre-generated thumbnail if present in the same directory
+    QFileInfo fi(filePath);
+    QString thumbCandidate = fi.absolutePath() + "/" + fi.baseName() + "-thumb.jpg";
+    if (QFile::exists(thumbCandidate)) {
+        if (!pmLoaded.load(thumbCandidate)) pmLoaded = QPixmap();
+    }
+    if (pmLoaded.isNull()) {
+        if (!pmLoaded.load(filePath)) pmLoaded = QPixmap();
+    }
+    if (!pmLoaded.isNull()) {
         // Scale to fit within m_thumbSize x m_thumbSize while preserving aspect ratio
         QSize bound(m_thumbSize, m_thumbSize);
         QPixmap pm = pmLoaded.scaled(bound, Qt::KeepAspectRatio, Qt::SmoothTransformation);
@@ -95,8 +105,22 @@ void ThumbnailViewer::loadFromCache(const QString &cacheDir)
 {
     clearGrid();
 
+    QElapsedTimer timer; timer.start();
+    int scanned = 0;
+    int accepted = 0;
+
     QDir dir(cacheDir);
     if (!dir.exists()) return;
+
+    // load index.json once for metadata lookups
+    m_indexPath = dir.filePath("index.json");
+    m_indexJson = QJsonObject();
+    QFile idxfile(m_indexPath);
+    if (idxfile.open(QIODevice::ReadOnly)) {
+        QJsonDocument doc = QJsonDocument::fromJson(idxfile.readAll());
+        if (doc.isObject()) m_indexJson = doc.object();
+        idxfile.close();
+    }
 
     QStringList nameFilters;
     // common image extensions
@@ -106,21 +130,9 @@ void ThumbnailViewer::loadFromCache(const QString &cacheDir)
     const int columns = 4;
     int row = 0, col = 0;
     for (const QFileInfo &fi : files) {
-        // respect aspect ratio filter if enabled
-        if (m_filterAspect) {
-            QImageReader r(fi.absoluteFilePath());
-            QSize sz = r.size();
-            if (sz.isEmpty()) {
-                // fallback to load
-                QImage img(fi.absoluteFilePath());
-                if (img.isNull()) { col++; if (col>=columns){col=0;row++;} continue; }
-                sz = img.size();
-            }
-            double ar = double(sz.width()) / double(sz.height());
-            if (qAbs(ar - m_targetAspect) > 0.03) { // tolerance ~3%
-                col++; if (col>=columns){col=0;row++;} continue;
-            }
-        }
+        scanned++;
+        if (!acceptsImage(fi.absoluteFilePath())) { col++; if (col>=columns){col=0;row++;} continue; }
+        accepted++;
         addThumbnail(fi.absoluteFilePath(), row, col);
         col++;
         if (col >= columns) { col = 0; row++; }
@@ -128,6 +140,7 @@ void ThumbnailViewer::loadFromCache(const QString &cacheDir)
 
     // adjust container layout
     m_container->adjustSize();
+    qDebug() << "ThumbnailViewer::loadFromCache: scanned=" << scanned << "accepted=" << accepted << "thumbs=" << m_labels.size() << "ms=" << timer.elapsed();
 }
 
 void ThumbnailViewer::refresh()
@@ -144,18 +157,7 @@ void ThumbnailViewer::addThumbnailFromPath(const QString &filePath)
     int col = idx % columns;
     // avoid adding duplicates
     if (hasThumbnailForFile(filePath)) return;
-    // respect aspect ratio filter
-    if (m_filterAspect) {
-        QImageReader r(filePath);
-        QSize sz = r.size();
-        if (sz.isEmpty()) {
-            QImage img(filePath);
-            if (img.isNull()) return;
-            sz = img.size();
-        }
-        double ar = double(sz.width()) / double(sz.height());
-        if (qAbs(ar - m_targetAspect) > 0.03) return;
-    }
+    if (!acceptsImage(filePath)) return;
     addThumbnail(filePath, row, col);
 }
 
@@ -173,14 +175,67 @@ bool ThumbnailViewer::hasThumbnailForFile(const QString &filePath) const
 
 void ThumbnailViewer::setFilterAspectRatioEnabled(bool enabled)
 {
-    m_filterAspect = enabled;
-    // reload current cache view; caller should provide cache dir by calling loadFromCache again
+    if (enabled) setAspectFilterMode(FilterExact);
+    else setAspectFilterMode(FilterAll);
 }
 
 void ThumbnailViewer::setTargetAspectRatio(double ratio)
 {
     if (ratio <= 0.0) return;
     m_targetAspect = ratio;
+}
+
+void ThumbnailViewer::setAspectFilterMode(AspectFilterMode mode)
+{
+    m_filterMode = mode;
+}
+
+ThumbnailViewer::AspectFilterMode ThumbnailViewer::aspectFilterMode() const
+{
+    return m_filterMode;
+}
+
+bool ThumbnailViewer::acceptsImage(const QString &filePath) const
+{
+    // cheap quick-check: extension + existence
+    QFileInfo fi(filePath);
+    if (!fi.exists() || !fi.isFile()) return false;
+
+    if (m_filterMode == FilterAll) return true;
+
+    // consult in-memory index.json (if loaded) to avoid reading image files
+    QString fname = fi.fileName();
+    if (!m_indexJson.isEmpty() && m_indexJson.contains(fname)) {
+        QJsonObject entry = m_indexJson.value(fname).toObject();
+        if (entry.contains("width") && entry.contains("height")) {
+            int w = entry.value("width").toInt(0);
+            int h = entry.value("height").toInt(0);
+            if (w <= 0 || h <= 0) return false;
+            double ar = double(w) / double(h);
+            if (m_filterMode == FilterExact) return qAbs(ar - m_targetAspect) <= 0.03;
+            bool primaryHorizontal = m_targetAspect >= 1.0;
+            bool imgHorizontal = w >= h;
+            return primaryHorizontal == imgHorizontal;
+        }
+    }
+
+    QImageReader r(filePath);
+    QSize sz = r.size();
+    if (sz.isEmpty()) {
+        QImage img(filePath);
+        if (img.isNull()) return false;
+        sz = img.size();
+    }
+    if (sz.isEmpty()) return false;
+    double ar = double(sz.width()) / double(sz.height());
+
+    if (m_filterMode == FilterExact) {
+        return qAbs(ar - m_targetAspect) <= 0.03;
+    }
+    // Rough: match orientation only (horizontal vs vertical)
+    bool primaryHorizontal = m_targetAspect >= 1.0;
+    bool imgHorizontal = sz.width() >= sz.height();
+    return primaryHorizontal == imgHorizontal;
 }
 
 #include "thumbnailviewer.moc"

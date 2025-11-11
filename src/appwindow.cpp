@@ -30,6 +30,7 @@
 #include <QScreen>
 #include <QImageReader>
 #include <QImage>
+#include <QElapsedTimer>
 
 // Worker object to perform subreddit scanning & downloading in a background thread.
 class UpdateWorker : public QObject {
@@ -133,16 +134,18 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     thumbnailViewer_->setMinimumHeight(300);
     l->addWidget(thumbnailViewer_, 1);
     qDebug() << "AppWindow ctor: added ThumbnailViewer to layout";
-    // Filtering panel: option to show only matching aspect ratio
-    chkFilterAspect_ = new QCheckBox("Only show matching aspect ratio", this);
-    l->addWidget(chkFilterAspect_);
+    // Filters panel (All / Exact / Rough)
+    filtersPanel_ = new FiltersPanel(this);
+    l->addWidget(filtersPanel_);
     // compute primary screen aspect ratio and set it on the thumbnail viewer
     QScreen *screen = QGuiApplication::primaryScreen();
     QSize scrSize = screen ? screen->size() : QSize(1920,1080);
     double primaryAspect = double(scrSize.width()) / double(scrSize.height());
     thumbnailViewer_->setTargetAspectRatio(primaryAspect);
-    connect(chkFilterAspect_, &QCheckBox::toggled, this, [this](bool on){
-        thumbnailViewer_->setFilterAspectRatioEnabled(on);
+    // apply initial mode and listen for changes
+    thumbnailViewer_->setAspectFilterMode(filtersPanel_->mode());
+    connect(filtersPanel_, &FiltersPanel::modeChanged, this, [this](ThumbnailViewer::AspectFilterMode mode){
+        thumbnailViewer_->setAspectFilterMode(mode);
         // reload thumbnails from cache so the filter takes effect immediately
         thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
     });
@@ -227,35 +230,31 @@ void AppWindow::onNewRandom() {
     nameFilters << "*.png" << "*.jpg" << "*.jpeg" << "*.bmp" << "*.webp" << "*.gif";
     QFileInfoList files = dir.entryInfoList(nameFilters, QDir::Files);
 
-    // compute primary aspect if filter enabled
-    bool filterAspect = chkFilterAspect_ ? chkFilterAspect_->isChecked() : false;
+    // ensure thumbnail viewer has up-to-date primary aspect (used by filters)
     QScreen *screen = QGuiApplication::primaryScreen();
     QSize scrSize = screen ? screen->size() : QSize(1920,1080);
     double primaryAspect = double(scrSize.width()) / double(scrSize.height());
+    thumbnailViewer_->setTargetAspectRatio(primaryAspect);
 
     struct Candidate { QString path; double weight; };
     QVector<Candidate> candidates;
     double totalWeight = 0.0;
 
+    QElapsedTimer timer; timer.start();
+    int scanned = 0;
+    int considered = 0;
+
     for (const QFileInfo &fi : files) {
         QString path = fi.absoluteFilePath();
+        scanned++;
         QString key = fi.fileName();
         QJsonObject entry = index.value(key).toObject();
         bool banned = entry.value("banned").toBool(false);
         if (banned) continue;
 
-        // aspect filter
-        if (filterAspect) {
-            QImageReader r(path);
-            QSize sz = r.size();
-            if (sz.isEmpty()) {
-                QImage img(path);
-                if (img.isNull()) continue;
-                sz = img.size();
-            }
-            double ar = double(sz.width()) / double(sz.height());
-            if (qAbs(ar - primaryAspect) > 0.03) continue; // skip non-matching
-        }
+        // apply current filters via thumbnail viewer (centralized)
+        if (!thumbnailViewer_->acceptsImage(path)) continue;
+        considered++;
 
         int score = entry.value("score").toInt(0);
         // weight: base 1, plus positive score bonus (negative scores not helpful)
@@ -265,7 +264,7 @@ void AppWindow::onNewRandom() {
     }
 
     if (candidates.empty()) {
-        qWarning() << "No candidate wallpapers found in cache (after filters).";
+        qWarning() << "No candidate wallpapers found in cache (after filters). scanned=" << scanned << "considered=" << considered << "ms=" << timer.elapsed();
         return;
     }
 
@@ -280,6 +279,7 @@ void AppWindow::onNewRandom() {
     if (chosen.isEmpty()) chosen = candidates.last().path;
 
     qDebug() << "Chosen wallpaper from cache:" << chosen;
+    qDebug() << "onNewRandom: scanned=" << scanned << "considered=" << considered << "candidates=" << candidates.size() << "ms=" << timer.elapsed();
     if (wallpaperSetter_.setWallpaper(chosen)) {
         qDebug() << "Wallpaper set successfully from cache";
         // update UI/details for the chosen image
