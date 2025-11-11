@@ -5,6 +5,7 @@ This module keeps dependencies to the standard library so the prototype is easy 
 from __future__ import annotations
 
 import json
+import random
 import urllib.request
 from typing import Optional, Dict, Any, List
 
@@ -71,3 +72,15 @@ def pick_first_image_url(subreddit: str) -> Optional[str]:
     listing = fetch_new_posts(subreddit, limit=8)
     urls = extract_image_urls_from_listing(listing)
     return urls[0] if urls else None
+
+
+def pick_random_image_url(subreddit: str, limit: int = 10) -> Optional[str]:
+    """Fetch the most recent `limit` posts and return a random image URL from candidates.
+
+    Returns None if no suitable image URL is found.
+    """
+    listing = fetch_new_posts(subreddit, limit=limit)
+    urls = extract_image_urls_from_listing(listing)
+    if not urls:
+        return None
+    return random.choice(urls)

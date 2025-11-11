@@ -21,6 +21,29 @@ class TestRedditExtraction(unittest.TestCase):
         self.assertIn("i.redd.it/example.jpg", urls[0])
         self.assertTrue(urls[1].endswith(".jpg"))
 
+    def test_pick_random_image_url(self):
+        # fake listing and monkeypatch fetch_new_posts
+        listing = {
+            "data": {
+                "children": [
+                    {"data": {"url": "https://i.redd.it/one.jpg"}},
+                    {"data": {"url": "https://i.redd.it/two.png"}},
+                    {"data": {"url": "https://imgur.com/three"}},
+                ]
+            }
+        }
+        orig = reddit.fetch_new_posts
+        try:
+            reddit.fetch_new_posts = lambda subreddit, limit=10: listing
+            url = reddit.pick_random_image_url("whatever", limit=3)
+            self.assertIn(url, [
+                "https://i.redd.it/one.jpg",
+                "https://i.redd.it/two.png",
+                "https://imgur.com/three.jpg",
+            ])
+        finally:
+            reddit.fetch_new_posts = orig
+
 
 class TestEnvDetection(unittest.TestCase):
     def test_detect_desktop_from_env(self):
