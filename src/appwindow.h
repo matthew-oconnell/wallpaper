@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QWidget>
+#include <QSystemTrayIcon>
 #include "wallpapersetter.h"
 #include "redditfetcher.h"
 #include "cachemanager.h"
@@ -8,11 +9,10 @@
 #include "sourcespanel.h"
 #include "filterspanel.h"
 
-class QSystemTrayIcon;
-
 class QLabel;
 class QPushButton;
 class QCheckBox;
+class QAction;
 
 
 class AppWindow : public QWidget {
@@ -23,6 +23,7 @@ public:
 
 private slots:
     void onNewRandom();
+    void onTrayActivated(QSystemTrayIcon::ActivationReason reason);
     void onThumbnailSelected(const QString &imagePath);
     void onThumbUp();
     void onThumbDown();

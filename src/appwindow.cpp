@@ -269,6 +269,17 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     QAction *actNew = new QAction("🎲 New Random Wallpaper", this);
     connect(actNew, &QAction::triggered, this, &AppWindow::onNewRandom);
     menu->addAction(actNew);
+
+    QAction *actOpen = new QAction("Open", this);
+    connect(actOpen, &QAction::triggered, this, [this]() {
+        // Restore and activate the main window
+        this->show();
+        this->raise();
+        this->activateWindow();
+        // If minimized, restore
+        this->setWindowState((this->windowState() & ~Qt::WindowMinimized) | Qt::WindowActive);
+    });
+    menu->addAction(actOpen);
     // tray actions for quick votes/ban
     QAction *actThumbUp = new QAction("👍 Current Wallpaper", this);
     connect(actThumbUp, &QAction::triggered, this, &AppWindow::onThumbUp);
@@ -293,6 +304,10 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     menu->addAction(actQuit);
     trayIcon_->setContextMenu(menu);
     trayIcon_->show();
+    // Handle tray activation:
+    // - Single left click (Trigger) -> open window
+    // - Right click (Context) -> context menu (provided by QSystemTrayIcon)
+    connect(trayIcon_, &QSystemTrayIcon::activated, this, &AppWindow::onTrayActivated);
     qDebug() << "AppWindow ctor: tray icon shown, ctor end";
 }
 
@@ -314,6 +329,17 @@ void AppWindow::showEvent(QShowEvent *event)
         });
         m_initialLoadDone = true;
     }
+}
+
+void AppWindow::onTrayActivated(QSystemTrayIcon::ActivationReason reason)
+{
+    if (reason == QSystemTrayIcon::Trigger) {
+        // Single left click: select a new random wallpaper
+        qDebug() << "Tray icon clicked (Trigger): selecting new random wallpaper";
+        onNewRandom();
+        return;
+    }
+    // Context (right-click) is handled by QSystemTrayIcon by showing the menu
 }
 
 void AppWindow::onNewRandom() {
