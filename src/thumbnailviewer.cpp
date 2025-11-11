@@ -106,4 +106,14 @@ void ThumbnailViewer::refresh()
     // no-op; callers should call loadFromCache(cacheDir) when desired
 }
 
+void ThumbnailViewer::addThumbnailFromPath(const QString &filePath)
+{
+    // compute next grid position
+    int idx = m_labels.size();
+    const int columns = 4;
+    int row = idx / columns;
+    int col = idx % columns;
+    addThumbnail(filePath, row, col);
+}
+
 #include "thumbnailviewer.moc"

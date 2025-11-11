@@ -24,6 +24,7 @@ private slots:
     void onThumbUp();
     void onThumbDown();
     void onPermaban();
+    void onUpdateCache();
 
 private:
     QSystemTrayIcon *trayIcon_ = nullptr;
@@ -32,6 +33,8 @@ private:
     CacheManager m_cache;
     ThumbnailViewer *thumbnailViewer_ = nullptr;
     QString currentSelectedPath_;
+    QStringList subscribedSubreddits_ = { "WidescreenWallpaper" };
+    QPushButton *btnUpdate_ = nullptr;
     // detail panel widgets
     QLabel *detailPath_ = nullptr;
     QLabel *detailSubreddit_ = nullptr;

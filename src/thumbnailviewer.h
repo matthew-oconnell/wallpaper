@@ -16,6 +16,10 @@ public:
 
     // Load thumbnails from cache directory (e.g. ~/.cache/wallpaper)
     void loadFromCache(const QString &cacheDir);
+    
+public slots:
+    // Add a single thumbnail from a file path (used for incremental updates)
+    void addThumbnailFromPath(const QString &filePath);
 
 signals:
     // Emitted when user clicks a thumbnail; path is full filesystem path to image

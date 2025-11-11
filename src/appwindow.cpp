@@ -20,6 +20,39 @@
 #include <QFile>
 #include <QDateTime>
 #include <QFileInfo>
+#include <QThread>
+#include <functional>
+
+// Worker object to perform subreddit scanning & downloading in a background thread.
+class UpdateWorker : public QObject {
+    Q_OBJECT
+public:
+    explicit UpdateWorker(const QStringList &subs, QObject *parent = nullptr)
+        : QObject(parent), subs_(subs) {}
+
+public slots:
+    void run() {
+        for (const QString &sub : subs_) {
+            RedditFetcher rf;
+            std::vector<std::string> urls = rf.fetchRecentImageUrls(sub, 100);
+            for (const auto &u : urls) {
+                QString url = QString::fromStdString(u);
+                CacheManager cache;
+                QString cached = cache.downloadAndCache(url);
+                if (!cached.isEmpty()) emit imageCached(cached, sub, url);
+            }
+        }
+        emit finished();
+    }
+
+signals:
+    void imageCached(const QString &cachedPath, const QString &subreddit, const QString &sourceUrl);
+    void finished();
+
+private:
+    QStringList subs_;
+};
+
 
 AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     setWindowTitle("Wallpaper C++");
@@ -31,6 +64,11 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     QPushButton *btn = new QPushButton("New Random Wallpaper", this);
     connect(btn, &QPushButton::clicked, this, &AppWindow::onNewRandom);
     l->addWidget(btn);
+
+    QPushButton *btnUpdate = new QPushButton("Update Cache", this);
+    connect(btnUpdate, &QPushButton::clicked, this, &AppWindow::onUpdateCache);
+    l->addWidget(btnUpdate);
+    btnUpdate_ = btnUpdate;
 
     // thumbnail viewer
     thumbnailViewer_ = new ThumbnailViewer(this);
@@ -227,3 +265,42 @@ void AppWindow::onPermaban() {
         qWarning() << "Failed to write index.json";
     }
 }
+
+void AppWindow::onUpdateCache() {
+    qDebug() << "Update cache: scanning subscribed subreddits...";
+    QString indexPath = m_cache.cacheDirPath() + "/index.json";
+    QJsonObject root = readIndex(indexPath);
+
+    // Run update in background thread so UI stays responsive
+    btnUpdate_->setEnabled(false);
+    QThread *thread = new QThread;
+    UpdateWorker *worker = new UpdateWorker(subscribedSubreddits_);
+    worker->moveToThread(thread);
+    connect(thread, &QThread::started, worker, &UpdateWorker::run);
+    // When worker reports an image cached, update index.json and thumbnail viewer on UI thread
+    connect(worker, &UpdateWorker::imageCached, this, [this, indexPath](const QString &cached, const QString &subreddit, const QString &sourceUrl){
+        // load index
+        QJsonObject root = readIndex(indexPath);
+        QString key = QFileInfo(cached).fileName();
+        QJsonObject entry = root.value(key).toObject();
+        entry["subreddit"] = subreddit;
+        entry["downloaded_at"] = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+        if (!entry.contains("score")) entry["score"] = 0;
+        if (!entry.contains("banned")) entry["banned"] = false;
+        entry["source_url"] = sourceUrl;
+        root[key] = entry;
+        writeIndex(indexPath, root);
+        // add thumbnail to viewer incrementally
+        thumbnailViewer_->addThumbnailFromPath(cached);
+    });
+    connect(worker, &UpdateWorker::finished, this, [this, thread, worker, indexPath](){
+        qDebug() << "Background update finished";
+        btnUpdate_->setEnabled(true);
+        thread->quit();
+        worker->deleteLater();
+        thread->deleteLater();
+    });
+    thread->start();
+}
+
+#include "appwindow.moc"
