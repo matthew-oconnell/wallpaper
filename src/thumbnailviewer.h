@@ -49,6 +49,8 @@ public slots:
     // Return true if the thumbnail viewer would accept (render/select) this image given current filters
     bool acceptsImage(const QString &filePath) const;
 
+private slots:
+    void onThumbnailLoaded(const QString &filePath, const QImage &img);
 private:
     void clearGrid();
     void addThumbnail(const QString &filePath, int row, int col);

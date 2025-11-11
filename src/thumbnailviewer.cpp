@@ -10,6 +10,11 @@
 #include <QImageReader>
 #include <QDebug>
 #include <QElapsedTimer>
+#include <QGuiApplication>
+#include <QScreen>
+#include <QThreadPool>
+#include <QRunnable>
+#include <QSaveFile>
 
 // Simple clickable QLabel
 class ClickableLabel : public QLabel {
@@ -46,6 +51,8 @@ ThumbnailViewer::ThumbnailViewer(QWidget *parent)
     layout->setContentsMargins(0,0,0,0);
     layout->addWidget(m_scroll);
     setLayout(layout);
+
+    qRegisterMetaType<QImage>("QImage");
 }
 
 void ThumbnailViewer::clearGrid()
@@ -61,31 +68,12 @@ void ThumbnailViewer::addThumbnail(const QString &filePath, int row, int col)
 {
     auto *label = new ClickableLabel;
     label->setAlignment(Qt::AlignCenter);
-    label->setScaledContents(false); // we will set a pixmap sized to preserve aspect ratio
+    label->setScaledContents(false); // pixmap will be set when ready
 
-    QPixmap pmLoaded;
-    // Prefer a pre-generated thumbnail if present in the same directory
-    QFileInfo fi(filePath);
-    QString thumbCandidate = fi.absolutePath() + "/" + fi.baseName() + "-thumb.jpg";
-    if (QFile::exists(thumbCandidate)) {
-        if (!pmLoaded.load(thumbCandidate)) pmLoaded = QPixmap();
-    }
-    if (pmLoaded.isNull()) {
-        if (!pmLoaded.load(filePath)) pmLoaded = QPixmap();
-    }
-    if (!pmLoaded.isNull()) {
-        // Scale to fit within m_thumbSize x m_thumbSize while preserving aspect ratio
-        QSize bound(m_thumbSize, m_thumbSize);
-        QPixmap pm = pmLoaded.scaled(bound, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-        label->setPixmap(pm);
-        // Size the label to the actual scaled pixmap so the widget matches aspect ratio
-        label->setFixedSize(pm.size());
-    } else {
-        // Fallback square placeholder
-        label->setFixedSize(m_thumbSize, m_thumbSize);
-        label->setText("?");
-        label->setAlignment(Qt::AlignCenter);
-    }
+    // Initial placeholder: fixed square so layout is stable
+    label->setFixedSize(m_thumbSize, m_thumbSize);
+    label->setText("...");
+    label->setAlignment(Qt::AlignCenter);
 
     connect(label, &ClickableLabel::clicked, this, [this, filePath](){
         emit imageSelected(filePath);
@@ -99,6 +87,38 @@ void ThumbnailViewer::addThumbnail(const QString &filePath, int row, int col)
 
     m_grid->addWidget(label, row, col);
     m_labels.append(label);
+
+    // Asynchronously load the thumbnail/image in a background runnable to avoid blocking UI
+    QString path = filePath;
+    ThumbnailViewer *self = this;
+    class LoadRunnable : public QRunnable {
+    public:
+        LoadRunnable(const QString &p, ThumbnailViewer *v, int sz) : p(p), viewer(v), thumbSz(sz) {}
+        void run() override {
+            QImage img;
+            QFileInfo fi(p);
+            QString thumbCandidate = fi.absolutePath() + "/" + fi.baseName() + "-thumb.jpg";
+            if (QFile::exists(thumbCandidate)) {
+                QImageReader r(thumbCandidate);
+                img = r.read();
+            }
+            if (img.isNull()) {
+                QImageReader r2(p);
+                img = r2.read();
+            }
+            if (img.isNull()) return;
+            QImage scaled = img.scaled(thumbSz, thumbSz, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            // invoke the UI thread to set the pixmap using the functor overload (no metatype required)
+            QMetaObject::invokeMethod(viewer, [viewer, p, scaled]() {
+                viewer->onThumbnailLoaded(p, scaled);
+            }, Qt::QueuedConnection);
+        }
+    private:
+        QString p;
+        ThumbnailViewer *viewer;
+        int thumbSz;
+    };
+    QThreadPool::globalInstance()->start(new LoadRunnable(path, self, m_thumbSize));
 }
 
 void ThumbnailViewer::loadFromCache(const QString &cacheDir)
@@ -122,19 +142,98 @@ void ThumbnailViewer::loadFromCache(const QString &cacheDir)
         idxfile.close();
     }
 
-    QStringList nameFilters;
-    // common image extensions
-    nameFilters << "*.png" << "*.jpg" << "*.jpeg" << "*.bmp" << "*.webp" << "*.gif";
-    QFileInfoList files = dir.entryInfoList(nameFilters, QDir::Files, QDir::Time);
+    // Build the list of files to consider. Prefer entries from index.json for
+    // fast metadata lookups (avoids opening/decoding many images). If index.json
+    // is empty, fall back to scanning the directory.
+    QVector<QFileInfo> fileList;
+    if (!m_indexJson.isEmpty()) {
+        // Iterate index keys and only include files that exist on disk
+        const QJsonObject::Iterator itEnd = m_indexJson.end();
+        QVector<QFileInfo> missingMeta;
+        for (QJsonObject::Iterator it = m_indexJson.begin(); it != itEnd; ++it) {
+            QString key = it.key();
+            QString path = dir.filePath(key);
+            QFileInfo fi(path);
+            if (!fi.exists() || !fi.isFile()) continue;
+            QJsonObject entry = it.value().toObject();
+            if (entry.contains("width") && entry.contains("height")) {
+                fileList.append(fi);
+            } else {
+                // Defer files missing metadata to a background task and skip them for now
+                missingMeta.append(fi);
+            }
+        }
+        // Schedule background tasks to generate metadata/thumbnails for missing entries
+        if (!missingMeta.isEmpty()) {
+            QString dirPath = dir.absolutePath();
+            for (const QFileInfo &mfi : missingMeta) {
+                QString mpath = mfi.absoluteFilePath();
+                QString mkey = mfi.fileName();
+                // lightweight QRunnable to compute size and thumbnail and update index.json
+                class EnsureMetaRunnable : public QRunnable {
+                public:
+                    EnsureMetaRunnable(const QString &filePath, const QString &key, const QString &dirPath)
+                        : filePath(filePath), key(key), dirPath(dirPath) {}
+                    void run() override {
+                        QImageReader r(filePath);
+                        QSize sz = r.size();
+                        QImage img;
+                        if (sz.isEmpty()) {
+                            img = QImage(filePath);
+                            if (!img.isNull()) sz = img.size();
+                        }
+                        QString thumbName;
+                        if (!img.isNull()) {
+                            QByteArray hash = QFileInfo(filePath).baseName().toUtf8();
+                            thumbName = QString::fromUtf8(hash) + "-thumb.jpg";
+                            QString thumbPath = QDir(dirPath).filePath(thumbName);
+                            QImage thumb = img.scaled(300, 300, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                            thumb.save(thumbPath, "JPEG", 85);
+                        }
+                        QString indexPath = QDir(dirPath).filePath("index.json");
+                        QJsonObject rootObj;
+                        QFile idxf(indexPath);
+                        if (idxf.open(QIODevice::ReadOnly)) {
+                            QJsonDocument doc = QJsonDocument::fromJson(idxf.readAll());
+                            if (doc.isObject()) rootObj = doc.object();
+                            idxf.close();
+                        }
+                        QJsonObject entry = rootObj.value(key).toObject();
+                        if (!sz.isEmpty()) { entry["width"] = sz.width(); entry["height"] = sz.height(); }
+                        if (!thumbName.isEmpty()) entry["thumbnail"] = thumbName;
+                        rootObj[key] = entry;
+                        QSaveFile sf(indexPath);
+                        if (sf.open(QIODevice::WriteOnly)) {
+                            sf.write(QJsonDocument(rootObj).toJson(QJsonDocument::Indented));
+                            sf.commit();
+                        }
+                    }
+                private:
+                    QString filePath;
+                    QString key;
+                    QString dirPath;
+                };
+                QThreadPool::globalInstance()->start(new EnsureMetaRunnable(mpath, mkey, dirPath));
+            }
+        }
+        // Sort by modification time (newest first) to show recent items first
+        std::sort(fileList.begin(), fileList.end(), [](const QFileInfo &a, const QFileInfo &b){
+            return a.lastModified() > b.lastModified();
+        });
+    } else {
+        QStringList nameFilters;
+        // common image extensions
+        nameFilters << "*.png" << "*.jpg" << "*.jpeg" << "*.bmp" << "*.webp" << "*.gif";
+        QFileInfoList files = dir.entryInfoList(nameFilters, QDir::Files, QDir::Time);
+        for (const QFileInfo &fi : files) fileList.append(fi);
+    }
 
     const int columns = 4;
     int row = 0, col = 0;
-    for (const QFileInfo &fi : files) {
+    for (const QFileInfo &fi : fileList) {
         scanned++;
-        if (!acceptsImage(fi.absoluteFilePath())) {
-            // skip filtered items without advancing the grid position so no empty slots are left
-            continue;
-        }
+        // Use acceptsImage which will consult m_indexJson (fast) where possible.
+        if (!acceptsImage(fi.absoluteFilePath())) continue;
         accepted++;
         addThumbnail(fi.absoluteFilePath(), row, col);
         // advance grid position only when we actually added a thumbnail
@@ -175,6 +274,23 @@ bool ThumbnailViewer::hasThumbnailForFile(const QString &filePath) const
         if (QFileInfo(existing).fileName() == targetName) return true;
     }
     return false;
+}
+
+void ThumbnailViewer::onThumbnailLoaded(const QString &filePath, const QImage &img)
+{
+    // find the label for this filePath and set the pixmap
+    for (ClickableLabel *l : m_labels) {
+        QVariant p = l->property("filePath");
+        if (!p.isValid()) continue;
+        QString existing = p.toString();
+        if (existing == filePath) {
+            QPixmap pm = QPixmap::fromImage(img);
+            l->setPixmap(pm);
+            l->setFixedSize(pm.size());
+            l->setText("");
+            break;
+        }
+    }
 }
 
 void ThumbnailViewer::setFilterAspectRatioEnabled(bool enabled)
@@ -239,7 +355,26 @@ bool ThumbnailViewer::acceptsImage(const QString &filePath) const
     // Rough: match orientation only (horizontal vs vertical)
     bool primaryHorizontal = m_targetAspect >= 1.0;
     bool imgHorizontal = sz.width() >= sz.height();
-    return primaryHorizontal == imgHorizontal;
+    if (primaryHorizontal != imgHorizontal) return false;
+
+    // Now ensure that when center-cropped to the target aspect ratio the resulting
+    // dimensions are at least as large as the current primary screen dimensions.
+    QScreen *screen = QGuiApplication::primaryScreen();
+    QSize scrSize = screen ? screen->size() : QSize(1920,1080);
+    int screenW = scrSize.width();
+    int screenH = scrSize.height();
+
+    int cropW, cropH;
+    if (ar > m_targetAspect) {
+        // image is wider than target -> crop width
+        cropH = sz.height();
+        cropW = int(double(cropH) * m_targetAspect + 0.5);
+    } else {
+        // image is taller (or equal) -> crop height
+        cropW = sz.width();
+        cropH = int(double(cropW) / m_targetAspect + 0.5);
+    }
+    return (cropW >= screenW) && (cropH >= screenH);
 }
 
 #include "thumbnailviewer.moc"
