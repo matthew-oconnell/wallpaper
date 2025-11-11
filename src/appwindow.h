@@ -8,6 +8,10 @@
 
 class QSystemTrayIcon;
 
+class QLabel;
+class QPushButton;
+
+
 class AppWindow : public QWidget {
     Q_OBJECT
 public:
@@ -17,6 +21,9 @@ public:
 private slots:
     void onNewRandom();
     void onThumbnailSelected(const QString &imagePath);
+    void onThumbUp();
+    void onThumbDown();
+    void onPermaban();
 
 private:
     QSystemTrayIcon *trayIcon_ = nullptr;
@@ -24,4 +31,14 @@ private:
     RedditFetcher m_fetcher;
     CacheManager m_cache;
     ThumbnailViewer *thumbnailViewer_ = nullptr;
+    QString currentSelectedPath_;
+    // detail panel widgets
+    QLabel *detailPath_ = nullptr;
+    QLabel *detailSubreddit_ = nullptr;
+    QLabel *detailResolution_ = nullptr;
+    QLabel *detailScore_ = nullptr;
+    QLabel *detailBanned_ = nullptr;
+    QPushButton *btnThumbUp_ = nullptr;
+    QPushButton *btnThumbDown_ = nullptr;
+    QPushButton *btnPermaban_ = nullptr;
 };
