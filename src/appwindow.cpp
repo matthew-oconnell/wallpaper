@@ -179,6 +179,8 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     }
     int savedMode = cfg.value("filter_mode").toInt((int)filtersPanel_->mode());
     filtersPanel_->setMode(static_cast<ThumbnailViewer::AspectFilterMode>(savedMode));
+    bool savedFavOnly = cfg.value("favorites_only").toBool(false);
+    filtersPanel_->setFavoritesOnly(savedFavOnly);
 
     qDebug() << "AppWindow ctor: before ThumbnailViewer";
     // thumbnail viewer
@@ -216,6 +218,26 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
             qWarning() << "Failed to write config file:" << configPath;
         }
         // reload thumbnails from cache so the filter takes effect immediately
+        thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
+    });
+    connect(filtersPanel_, &FiltersPanel::favoritesOnlyChanged, this, [this, configPath](bool favOnly){
+        thumbnailViewer_->setFavoritesOnly(favOnly);
+        // persist selection atomically
+        QJsonObject newCfg;
+        QFile rcf(configPath);
+        if (rcf.open(QIODevice::ReadOnly)) {
+            QJsonDocument doc = QJsonDocument::fromJson(rcf.readAll());
+            if (doc.isObject()) newCfg = doc.object();
+            rcf.close();
+        }
+        newCfg["favorites_only"] = favOnly;
+        QSaveFile sf(configPath);
+        if (sf.open(QIODevice::WriteOnly)) {
+            sf.write(QJsonDocument(newCfg).toJson(QJsonDocument::Indented));
+            sf.commit();
+        } else {
+            qWarning() << "Failed to write config file:" << configPath;
+        }
         thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
     });
     // initial load of thumbnails deferred until the window is shown to allow correct layout

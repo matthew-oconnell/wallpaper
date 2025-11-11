@@ -1,6 +1,7 @@
 #include "filterspanel.h"
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QCheckBox>
 
 FiltersPanel::FiltersPanel(QWidget *parent)
     : QWidget(parent), combo_(new QComboBox(this))
@@ -13,6 +14,10 @@ FiltersPanel::FiltersPanel(QWidget *parent)
     combo_->addItem("Rough", QVariant::fromValue<int>(ThumbnailViewer::FilterRough));
     combo_->setCurrentIndex(0);
     layout->addWidget(combo_);
+
+    favOnly_ = new QCheckBox("Favorites only", this);
+    layout->addWidget(favOnly_);
+    connect(favOnly_, &QCheckBox::toggled, this, [this](bool checked){ emit favoritesOnlyChanged(checked); });
 
     connect(combo_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int){
         int v = combo_->currentData().toInt();
@@ -33,4 +38,13 @@ void FiltersPanel::setMode(ThumbnailViewer::AspectFilterMode m) {
             return;
         }
     }
+}
+
+bool FiltersPanel::favoritesOnly() const {
+    return favOnly_ ? favOnly_->isChecked() : false;
+}
+
+void FiltersPanel::setFavoritesOnly(bool v) {
+    if (!favOnly_) return;
+    favOnly_->setChecked(v);
 }

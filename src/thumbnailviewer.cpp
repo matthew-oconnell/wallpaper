@@ -373,6 +373,21 @@ void ThumbnailViewer::setAllowedSubreddits(const QStringList &allowed)
     }
 }
 
+void ThumbnailViewer::setFavoritesOnly(bool v)
+{
+    // Caller should call loadFromCache to refresh view after changing this
+    // but we store the flag so acceptsImage can consult it.
+    // We'll store it as a runtime-only flag.
+    // Add a dynamic property on this object so we don't need a header change for storage here.
+    this->setProperty("favoritesOnly", v);
+}
+
+bool ThumbnailViewer::favoritesOnly() const
+{
+    QVariant v = this->property("favoritesOnly");
+    return v.isValid() ? v.toBool() : false;
+}
+
 void ThumbnailViewer::resizeEvent(QResizeEvent *event)
 {
     QWidget::resizeEvent(event);
@@ -403,6 +418,22 @@ bool ThumbnailViewer::acceptsImage(const QString &filePath) const
         // If we don't have metadata and an allowlist is configured, reject
         if (!m_allowedSubreddits.isEmpty()) {
             qDebug() << "ThumbnailViewer: rejecting" << fname << "because missing subreddit metadata while allowlist active";
+            return false;
+        }
+    }
+
+    // If favorites-only filter is enabled, reject non-favorited images
+    if (favoritesOnly()) {
+        if (!m_indexJson.isEmpty() && m_indexJson.contains(fname)) {
+            QJsonObject entry = m_indexJson.value(fname).toObject();
+            bool fav = entry.value("favorite").toBool(false);
+            if (!fav) {
+                qDebug() << "ThumbnailViewer: rejecting" << fname << "because not favorited";
+                return false;
+            }
+        } else {
+            // No metadata -> can't know favorite status -> reject
+            qDebug() << "ThumbnailViewer: rejecting" << fname << "because missing metadata for favorites filter";
             return false;
         }
     }

@@ -50,6 +50,9 @@ public slots:
     void setTargetAspectRatio(double ratio); // width/height
     void setAspectFilterMode(AspectFilterMode mode);
     AspectFilterMode aspectFilterMode() const;
+    // Show only favorited images when true (reads 'favorite' from index.json)
+    void setFavoritesOnly(bool v);
+    bool favoritesOnly() const;
     // Limit shown thumbnails to these enabled subreddits; empty list means allow all
     void setAllowedSubreddits(const QStringList &allowed);
 
