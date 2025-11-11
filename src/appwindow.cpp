@@ -17,6 +17,7 @@
 #include "cachemanager.h"
 #include "thumbnailviewer.h"
 #include "sourcespanel.h"
+#include "updateworker.h"
 #include <QLabel>
 #include <QPushButton>
 #include <QJsonDocument>
@@ -163,10 +164,10 @@ AppWindow::AppWindow(QWidget *parent)
     });
     
     // Manual update button (restore deleted control): triggers cache update
-    QPushButton *btnUpdate = new QPushButton("Update", this);
-    btnUpdate->setToolTip("Fetch new images and update the cache/index");
-    l->addWidget(btnUpdate);
-    connect(btnUpdate, &QPushButton::clicked, this, &AppWindow::onUpdateCache);
+    btnUpdate_ = new QPushButton("Update", this);
+    btnUpdate_->setToolTip("Fetch new images and update the cache/index");
+    l->addWidget(btnUpdate_);
+    connect(btnUpdate_, &QPushButton::clicked, this, &AppWindow::onUpdateCache);
     // initial load of thumbnails deferred until the window is shown to allow correct layout
     connect(thumbnailViewer_, &ThumbnailViewer::imageSelected, this, &AppWindow::onThumbnailSelected);
     // double-click (activate) should set the wallpaper immediately
@@ -533,11 +534,83 @@ void AppWindow::onPermaban() {
 }
 
 void AppWindow::onUpdateCache() {
-    // Update worker temporarily disabled in this development build (missing
-    // UpdateWorker implementation). Restore the full update worker when the
-    // UpdateWorker class is available.
-    qWarning() << "onUpdateCache: UpdateWorker not available in this build. Skipping update.";
-    return;
+    // Start a background UpdateWorker that fetches recent posts and downloads images.
+    if (!btnUpdate_) return;
+    btnUpdate_->setEnabled(false);
+    btnUpdate_->setText("Updating...");
+
+    // determine enabled subreddits
+    QStringList subs;
+    if (sourcesPanel_) subs = sourcesPanel_->enabledSources();
+    if (subs.isEmpty()) subs = subscribedSubreddits_; // fallback
+
+    // create worker + thread
+    UpdateWorker *worker = new UpdateWorker(&m_fetcher, &m_cache, subs);
+    QThread *t = new QThread(this);
+    worker->moveToThread(t);
+
+    // propagate imageCached -> update url_map.json and index.json
+    connect(worker, &UpdateWorker::imageCached, this, [this](const QString &localPath, const QString &subreddit, const QString &sourceUrl){
+        // update url_map.json in config dir
+        QString configDir = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/wallpaper";
+        QDir().mkpath(configDir);
+        QString urlMapPath = configDir + "/url_map.json";
+        QJsonObject urlmap;
+        QFile f(urlMapPath);
+        if (f.open(QIODevice::ReadOnly)) {
+            QJsonDocument doc = QJsonDocument::fromJson(f.readAll());
+            if (doc.isObject()) urlmap = doc.object();
+            f.close();
+        }
+        QUrl u(sourceUrl);
+        u.setQuery(QString());
+        u.setFragment(QString());
+        QString norm = u.toString();
+        QJsonArray arr = urlmap.value(norm).toArray();
+        bool found = false;
+        for (const QJsonValue &v : arr) if (v.toString() == subreddit) { found = true; break; }
+        if (!found) arr.append(subreddit);
+        urlmap.insert(norm, arr);
+        QSaveFile sf(urlMapPath);
+        if (sf.open(QIODevice::WriteOnly)) {
+            sf.write(QJsonDocument(urlmap).toJson(QJsonDocument::Indented));
+            sf.commit();
+        }
+
+        // update index.json to set subreddit if missing
+        QString indexPath = m_cache.cacheDirPath() + "/index.json";
+        QJsonObject root = readIndex(indexPath);
+        QString key = QFileInfo(localPath).fileName();
+        QJsonObject entry = root.value(key).toObject();
+        if (entry.value("subreddit").toString().isEmpty()) {
+            entry["subreddit"] = subreddit;
+            root[key] = entry;
+            writeIndex(indexPath, root);
+        }
+    });
+
+    connect(worker, &UpdateWorker::error, this, [this](const QString &msg){
+        qWarning() << "UpdateWorker error:" << msg;
+    });
+
+    connect(worker, &UpdateWorker::finished, this, [this, t, worker](){
+        if (btnUpdate_) {
+            btnUpdate_->setEnabled(true);
+            btnUpdate_->setText("Update");
+        }
+        // refresh thumbnails and counts
+        if (thumbnailViewer_) thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
+        if (sourcesPanel_) sourcesPanel_->updateCounts(m_cache.cacheDirPath());
+        // cleanup
+        t->quit();
+        worker->deleteLater();
+        t->deleteLater();
+    });
+
+    connect(t, &QThread::started, worker, &UpdateWorker::start);
+    // ensure thread stops if app exits
+    connect(qApp, &QCoreApplication::aboutToQuit, t, &QThread::quit);
+    t->start();
 }
 
 #include "appwindow.moc"

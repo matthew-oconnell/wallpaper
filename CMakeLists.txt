@@ -25,6 +25,8 @@ add_executable(wallpaper-cpp
   src/sourcespanel.cpp
   src/filterspanel.h
   src/filterspanel.cpp
+  src/updateworker.h
+  src/updateworker.cpp
 )
 target_link_libraries(wallpaper-cpp PRIVATE Qt6::Widgets Qt6::Network Qt6::Core Qt6::Gui)
 
