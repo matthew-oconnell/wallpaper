@@ -131,9 +131,13 @@ void ThumbnailViewer::loadFromCache(const QString &cacheDir)
     int row = 0, col = 0;
     for (const QFileInfo &fi : files) {
         scanned++;
-        if (!acceptsImage(fi.absoluteFilePath())) { col++; if (col>=columns){col=0;row++;} continue; }
+        if (!acceptsImage(fi.absoluteFilePath())) {
+            // skip filtered items without advancing the grid position so no empty slots are left
+            continue;
+        }
         accepted++;
         addThumbnail(fi.absoluteFilePath(), row, col);
+        // advance grid position only when we actually added a thumbnail
         col++;
         if (col >= columns) { col = 0; row++; }
     }
