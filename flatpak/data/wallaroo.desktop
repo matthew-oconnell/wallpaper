@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Wallaroo
+Comment=Auto-rotate wallpapers from saved cache
+Exec=wallaroo
+Icon=org.matthew.wallaroo
+Terminal=false
+Categories=Utility;DesktopSettings;
+Keywords=wallpaper;background;

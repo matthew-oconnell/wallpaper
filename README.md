@@ -1,6 +1,6 @@
-C++ Qt scaffold for Wallpaper
+C++ Qt scaffold for Wallaroo
 
-This folder contains a minimal Qt6-based scaffold for a wallpaper application.
+This folder contains a minimal Qt6-based scaffold for a wallpaper application named Wallaroo.
 
 Build (Linux example):
 
@@ -10,7 +10,7 @@ Build (Linux example):
 
 Run:
 
-  ./wallpaper-qt
+  ./wallaroo
 
 Notes:
 - CMake fetches the `parsec` JSON library (from https://github.com/matthew-oconnell/parsec) but the current code uses Qt's QJsonDocument for parsing. I'll switch parsing to parsec once you confirm the parsec include and API.

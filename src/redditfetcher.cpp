@@ -12,7 +12,7 @@ std::vector<std::string> RedditFetcher::fetchRecentImageUrls(const QString &subr
     QNetworkAccessManager mgr;
     QString url = QString("https://www.reddit.com/r/%1/new.json?limit=%2").arg(subreddit).arg(limit);
     QNetworkRequest req(url);
-    req.setRawHeader("User-Agent", "wallpaper-cpp/0.1");
+    req.setRawHeader("User-Agent", "wallaroo/0.1");
     QNetworkReply *reply = mgr.get(req);
     QEventLoop loop;
     QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);

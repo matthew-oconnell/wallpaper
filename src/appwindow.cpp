@@ -114,7 +114,7 @@ AppWindow::AppWindow(QWidget *parent)
     // default window size requested by user
     this->resize(900, 600);
     // ensure config dir path is available for later use
-    QString configDir = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/wallpaper";
+    QString configDir = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/wallaroo";
 
     // top-level layout: left sidebar (sources + filters) and right main area
     QHBoxLayout *main = new QHBoxLayout(this);
@@ -783,7 +783,7 @@ void AppWindow::onUpdateCache() {
     // propagate imageCached -> update url_map.json and index.json
     connect(worker, &UpdateWorker::imageCached, this, [this](const QString &localPath, const QString &subreddit, const QString &sourceUrl){
         // update url_map.json in config dir
-        QString configDir = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/wallpaper";
+    QString configDir = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/wallaroo";
         QDir().mkpath(configDir);
         QString urlMapPath = configDir + "/url_map.json";
         QJsonObject urlmap;
@@ -865,7 +865,7 @@ void AppWindow::onUpdateSubredditRequested(const QString &subreddit, int perSubL
 
     connect(worker, &UpdateWorker::imageCached, this, [this](const QString &localPath, const QString &sub, const QString &sourceUrl){
         // same handling as in onUpdateCache
-        QString configDir = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/wallpaper";
+    QString configDir = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/wallaroo";
         QDir().mkpath(configDir);
         QString urlMapPath = configDir + "/url_map.json";
         QJsonObject urlmap;

@@ -1,7 +1,7 @@
 # Flatpak/build artifacts and generated bundles
 /flatpak/build/
 /flatpak/repo/
-/wallpaper.flatpak
+/wallaroo.flatpak
 /.flatpak-builder/
 /.flatpak/
 /flatpak/export/

@@ -36,10 +36,10 @@ jobs:
 
       - name: Create bundle
         run: |
-          flatpak build-bundle flatpak/repo wallpaper.flatpak org.matthew.wallpaper || true
+          flatpak build-bundle flatpak/repo wallaroo.flatpak org.matthew.wallaroo || true
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: wallpaper.flatpak
-          path: wallpaper.flatpak
+          name: wallaroo.flatpak
+          path: wallaroo.flatpak

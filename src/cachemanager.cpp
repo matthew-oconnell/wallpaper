@@ -22,8 +22,8 @@
 #include <QFileInfo>
 
 QString CacheManager::downloadAndCache(const QString &url) {
-    // Use the same cache directory as the Python app (~/.cache/wallpaper)
-    QString cacheBase = QDir::homePath() + "/.cache/wallpaper";
+    // Use the same cache directory as the Python app (~/.cache/wallaroo)
+    QString cacheBase = QDir::homePath() + "/.cache/wallaroo";
     // ensure the directory exists (mkpath creates parent dirs as needed)
     if (!QDir().mkpath(cacheBase)) {
         qWarning() << "Failed to create cache directory:" << cacheBase;
@@ -38,7 +38,7 @@ QString CacheManager::downloadAndCache(const QString &url) {
 
     // base filename from URL
     QString name = url.section('/', -1);
-    if (name.isEmpty()) name = "wallpaper.jpg";
+    if (name.isEmpty()) name = "wallaroo.jpg";
     QString finalPath = dir.filePath(name);
     // if exists, return
     if (QFile::exists(finalPath)) return finalPath;
@@ -47,7 +47,7 @@ QString CacheManager::downloadAndCache(const QString &url) {
     qDebug() << "Downloading:" << url;
     QNetworkAccessManager mgr;
     QNetworkRequest req(url);
-    req.setRawHeader("User-Agent", "wallpaper-cpp/0.1");
+    req.setRawHeader("User-Agent", "wallaroo/0.1");
     QNetworkReply *reply = mgr.get(req);
     QEventLoop loop;
     QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
@@ -197,7 +197,7 @@ QString CacheManager::downloadAndCache(const QString &url) {
 }
 
 QString CacheManager::cacheDirPath() const {
-    QString cacheBase = QDir::homePath() + "/.cache/wallpaper";
+    QString cacheBase = QDir::homePath() + "/.cache/wallaroo";
     if (!QDir().exists(cacheBase)) {
         QDir().mkpath(cacheBase);
     }
