@@ -65,7 +65,7 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     connect(btn, &QPushButton::clicked, this, &AppWindow::onNewRandom);
     l->addWidget(btn);
 
-    QPushButton *btnUpdate = new QPushButton("Update Cache", this);
+    QPushButton *btnUpdate = new QPushButton("Look For New Wallpapers", this);
     connect(btnUpdate, &QPushButton::clicked, this, &AppWindow::onUpdateCache);
     l->addWidget(btnUpdate);
     btnUpdate_ = btnUpdate;
@@ -77,6 +77,15 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     // load thumbnails from cache
     thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
     connect(thumbnailViewer_, &ThumbnailViewer::imageSelected, this, &AppWindow::onThumbnailSelected);
+    // double-click (activate) should set the wallpaper immediately
+    connect(thumbnailViewer_, &ThumbnailViewer::imageActivated, this, [this](const QString &imagePath){
+        qDebug() << "Thumbnail activated (double-click):" << imagePath;
+        if (wallpaperSetter_.setWallpaper(imagePath)) {
+            qDebug() << "Wallpaper set from thumbnail activation:" << imagePath;
+        } else {
+            qWarning() << "Failed to set wallpaper for" << imagePath;
+        }
+    });
 
     // Details panel
     QWidget *detailWidget = new QWidget(this);

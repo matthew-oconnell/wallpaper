@@ -24,6 +24,8 @@ public slots:
 signals:
     // Emitted when user clicks a thumbnail; path is full filesystem path to image
     void imageSelected(const QString &imagePath);
+    // Emitted when user double-clicks a thumbnail (activate)
+    void imageActivated(const QString &imagePath);
 
 public slots:
     void refresh();

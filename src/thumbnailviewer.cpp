@@ -16,10 +16,15 @@ public:
     }
 signals:
     void clicked();
+    void doubleClicked();
 protected:
     void mouseReleaseEvent(QMouseEvent *ev) override {
         if (ev->button() == Qt::LeftButton) emit clicked();
         QLabel::mouseReleaseEvent(ev);
+    }
+    void mouseDoubleClickEvent(QMouseEvent *ev) override {
+        if (ev->button() == Qt::LeftButton) emit doubleClicked();
+        QLabel::mouseDoubleClickEvent(ev);
     }
 };
 
@@ -71,6 +76,9 @@ void ThumbnailViewer::addThumbnail(const QString &filePath, int row, int col)
 
     connect(label, &ClickableLabel::clicked, this, [this, filePath](){
         emit imageSelected(filePath);
+    });
+    connect(label, &ClickableLabel::doubleClicked, this, [this, filePath](){
+        emit imageActivated(filePath);
     });
 
     m_grid->addWidget(label, row, col);
