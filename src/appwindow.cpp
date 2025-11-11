@@ -25,6 +25,9 @@
 #include <QStandardPaths>
 #include <QDir>
 #include <functional>
+#include <QCheckBox>
+#include <QGuiApplication>
+#include <QScreen>
 
 // Worker object to perform subreddit scanning & downloading in a background thread.
 class UpdateWorker : public QObject {
@@ -60,21 +63,28 @@ private:
 AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     setWindowTitle("Wallpaper C++");
     resize(900, 600);
+    qDebug() << "AppWindow ctor: start";
 
     QVBoxLayout *l = new QVBoxLayout(this);
+    qDebug() << "AppWindow ctor: created layout";
     QLabel *label = new QLabel("Subreddit: r/WidescreenWallpaper", this);
+    qDebug() << "AppWindow ctor: created label";
     l->addWidget(label);
     QPushButton *btn = new QPushButton("New Random Wallpaper", this);
+    qDebug() << "AppWindow ctor: created New Random button";
     connect(btn, &QPushButton::clicked, this, &AppWindow::onNewRandom);
     l->addWidget(btn);
 
     QPushButton *btnUpdate = new QPushButton("Look For New Wallpapers", this);
+    qDebug() << "AppWindow ctor: created Update button";
     connect(btnUpdate, &QPushButton::clicked, this, &AppWindow::onUpdateCache);
     l->addWidget(btnUpdate);
     btnUpdate_ = btnUpdate;
 
+    qDebug() << "AppWindow ctor: before SourcesPanel";
     // Sources panel (manage subreddits)
     sourcesPanel_ = new SourcesPanel(this);
+    qDebug() << "AppWindow ctor: created SourcesPanel";
     // try to load persisted sources from config dir (~/.config/wallpaper/sources.json)
     QString configDir = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/wallpaper";
     QDir().mkpath(configDir);
@@ -98,16 +108,38 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
         subscribedSubreddits_ = sourcesPanel_->sources();
     }
     l->addWidget(sourcesPanel_);
+    qDebug() << "AppWindow ctor: added SourcesPanel to layout";
+    qDebug() << "AppWindow ctor: about to connect sourcesChanged";
     connect(sourcesPanel_, &SourcesPanel::sourcesChanged, this, [this, sourcesPathConfig](const QStringList &list){
+        qDebug() << "AppWindow ctor: inside sourcesChanged lambda";
         subscribedSubreddits_ = list;
         // persist to config
         sourcesPanel_->saveToFile(sourcesPathConfig);
     });
+    qDebug() << "AppWindow ctor: connected sourcesChanged";
 
+    // Filtering panel will be created after the thumbnail viewer so we can set the target aspect safely.
+
+    qDebug() << "AppWindow ctor: before ThumbnailViewer";
     // thumbnail viewer
     thumbnailViewer_ = new ThumbnailViewer(this);
+    qDebug() << "AppWindow ctor: created ThumbnailViewer";
     thumbnailViewer_->setMinimumHeight(300);
     l->addWidget(thumbnailViewer_, 1);
+    qDebug() << "AppWindow ctor: added ThumbnailViewer to layout";
+    // Filtering panel: option to show only matching aspect ratio
+    chkFilterAspect_ = new QCheckBox("Only show matching aspect ratio", this);
+    l->addWidget(chkFilterAspect_);
+    // compute primary screen aspect ratio and set it on the thumbnail viewer
+    QScreen *screen = QGuiApplication::primaryScreen();
+    QSize scrSize = screen ? screen->size() : QSize(1920,1080);
+    double primaryAspect = double(scrSize.width()) / double(scrSize.height());
+    thumbnailViewer_->setTargetAspectRatio(primaryAspect);
+    connect(chkFilterAspect_, &QCheckBox::toggled, this, [this](bool on){
+        thumbnailViewer_->setFilterAspectRatioEnabled(on);
+        // reload thumbnails from cache so the filter takes effect immediately
+        thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
+    });
     // load thumbnails from cache
     thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
     connect(thumbnailViewer_, &ThumbnailViewer::imageSelected, this, &AppWindow::onThumbnailSelected);
@@ -122,7 +154,9 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     });
 
     // Details panel
+    qDebug() << "AppWindow ctor: before Details panel";
     QWidget *detailWidget = new QWidget(this);
+    qDebug() << "AppWindow ctor: created Details widget";
     QVBoxLayout *detailLayout = new QVBoxLayout(detailWidget);
     detailPath_ = new QLabel("Path: ", detailWidget);
     detailSubreddit_ = new QLabel("Subreddit: unknown", detailWidget);
@@ -148,6 +182,7 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     connect(btnThumbUp_, &QPushButton::clicked, this, &AppWindow::onThumbUp);
     connect(btnThumbDown_, &QPushButton::clicked, this, &AppWindow::onThumbDown);
     connect(btnPermaban_, &QPushButton::clicked, this, &AppWindow::onPermaban);
+    qDebug() << "AppWindow ctor: connected detail buttons";
 
     // tray
     trayIcon_ = new QSystemTrayIcon(QIcon::fromTheme("image-x-generic"), this);
@@ -161,6 +196,7 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     menu->addAction(actQuit);
     trayIcon_->setContextMenu(menu);
     trayIcon_->show();
+    qDebug() << "AppWindow ctor: tray icon shown, ctor end";
 }
 
 AppWindow::~AppWindow() {

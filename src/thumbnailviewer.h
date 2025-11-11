@@ -33,6 +33,10 @@ public slots:
     // Return true if a thumbnail for the given file path (or filename) already exists in the view
     bool hasThumbnailForFile(const QString &filePath) const;
 
+    // Aspect-ratio filtering: when enabled, only show thumbnails that match the target aspect ratio
+    void setFilterAspectRatioEnabled(bool enabled);
+    void setTargetAspectRatio(double ratio); // width/height
+
 private:
     void clearGrid();
     void addThumbnail(const QString &filePath, int row, int col);
@@ -42,6 +46,8 @@ private:
     QGridLayout *m_grid;
     QVector<ClickableLabel*> m_labels;
     int m_thumbSize = 200; // pixels
+    bool m_filterAspect = false;
+    double m_targetAspect = 16.0/9.0;
 };
 
 #endif // THUMBNAILVIEWER_H

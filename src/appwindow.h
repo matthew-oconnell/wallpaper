@@ -11,6 +11,7 @@ class QSystemTrayIcon;
 
 class QLabel;
 class QPushButton;
+class QCheckBox;
 
 
 class AppWindow : public QWidget {
@@ -37,6 +38,7 @@ private:
     QStringList subscribedSubreddits_ = { "WidescreenWallpaper" };
     QPushButton *btnUpdate_ = nullptr;
     SourcesPanel *sourcesPanel_ = nullptr;
+    QCheckBox *chkFilterAspect_ = nullptr;
     // detail panel widgets
     QLabel *detailPath_ = nullptr;
     QLabel *detailSubreddit_ = nullptr;

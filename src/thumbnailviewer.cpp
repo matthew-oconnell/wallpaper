@@ -7,6 +7,8 @@
 #include <QMouseEvent>
 #include <QVBoxLayout>
 #include <QFileInfo>
+#include <QImageReader>
+#include <QDebug>
 
 // Simple clickable QLabel
 class ClickableLabel : public QLabel {
@@ -104,6 +106,21 @@ void ThumbnailViewer::loadFromCache(const QString &cacheDir)
     const int columns = 4;
     int row = 0, col = 0;
     for (const QFileInfo &fi : files) {
+        // respect aspect ratio filter if enabled
+        if (m_filterAspect) {
+            QImageReader r(fi.absoluteFilePath());
+            QSize sz = r.size();
+            if (sz.isEmpty()) {
+                // fallback to load
+                QImage img(fi.absoluteFilePath());
+                if (img.isNull()) { col++; if (col>=columns){col=0;row++;} continue; }
+                sz = img.size();
+            }
+            double ar = double(sz.width()) / double(sz.height());
+            if (qAbs(ar - m_targetAspect) > 0.03) { // tolerance ~3%
+                col++; if (col>=columns){col=0;row++;} continue;
+            }
+        }
         addThumbnail(fi.absoluteFilePath(), row, col);
         col++;
         if (col >= columns) { col = 0; row++; }
@@ -127,6 +144,18 @@ void ThumbnailViewer::addThumbnailFromPath(const QString &filePath)
     int col = idx % columns;
     // avoid adding duplicates
     if (hasThumbnailForFile(filePath)) return;
+    // respect aspect ratio filter
+    if (m_filterAspect) {
+        QImageReader r(filePath);
+        QSize sz = r.size();
+        if (sz.isEmpty()) {
+            QImage img(filePath);
+            if (img.isNull()) return;
+            sz = img.size();
+        }
+        double ar = double(sz.width()) / double(sz.height());
+        if (qAbs(ar - m_targetAspect) > 0.03) return;
+    }
     addThumbnail(filePath, row, col);
 }
 
@@ -140,6 +169,18 @@ bool ThumbnailViewer::hasThumbnailForFile(const QString &filePath) const
         if (QFileInfo(existing).fileName() == targetName) return true;
     }
     return false;
+}
+
+void ThumbnailViewer::setFilterAspectRatioEnabled(bool enabled)
+{
+    m_filterAspect = enabled;
+    // reload current cache view; caller should provide cache dir by calling loadFromCache again
+}
+
+void ThumbnailViewer::setTargetAspectRatio(double ratio)
+{
+    if (ratio <= 0.0) return;
+    m_targetAspect = ratio;
 }
 
 #include "thumbnailviewer.moc"

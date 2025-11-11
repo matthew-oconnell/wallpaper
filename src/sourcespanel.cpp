@@ -13,11 +13,16 @@
 SourcesPanel::SourcesPanel(QWidget *parent)
     : QWidget(parent)
 {
+    qDebug() << "SourcesPanel ctor: start";
     m_list = new QListWidget(this);
+    qDebug() << "SourcesPanel ctor: created QListWidget";
     m_edit = new QLineEdit(this);
+    qDebug() << "SourcesPanel ctor: created QLineEdit";
     m_edit->setPlaceholderText("subreddit (without r/) e.g. WidescreenWallpaper");
     m_btnAdd = new QPushButton("Add", this);
+    qDebug() << "SourcesPanel ctor: created Add button";
     m_btnRemove = new QPushButton("Remove", this);
+    qDebug() << "SourcesPanel ctor: created Remove button";
 
     auto *h = new QHBoxLayout;
     h->addWidget(m_edit);
@@ -28,6 +33,8 @@ SourcesPanel::SourcesPanel(QWidget *parent)
     v->addWidget(m_list);
     v->addLayout(h);
     setLayout(v);
+
+    qDebug() << "SourcesPanel ctor: layout set";
 
     connect(m_btnAdd, &QPushButton::clicked, this, [this]() {
         QString txt = m_edit->text().trimmed();
@@ -128,4 +135,4 @@ void SourcesPanel::setLastUpdated(const QString &subreddit, const QDateTime &whe
     m_lastUpdated.insert(subreddit, when);
 }
 
-#include "sourcespanel.moc"
+// No manual moc include; AUTOMOC will generate the necessary meta-object code.
