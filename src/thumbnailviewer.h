@@ -45,6 +45,8 @@ public slots:
     void setTargetAspectRatio(double ratio); // width/height
     void setAspectFilterMode(AspectFilterMode mode);
     AspectFilterMode aspectFilterMode() const;
+    // Limit shown thumbnails to these enabled subreddits; empty list means allow all
+    void setAllowedSubreddits(const QStringList &allowed);
 
     // Return true if the thumbnail viewer would accept (render/select) this image given current filters
     bool acceptsImage(const QString &filePath) const;
@@ -65,6 +67,7 @@ private:
     // cached index.json for the current cache dir (loaded by loadFromCache)
     QJsonObject m_indexJson;
     QString m_indexPath;
+    QStringList m_allowedSubreddits;
 };
 
 #endif // THUMBNAILVIEWER_H

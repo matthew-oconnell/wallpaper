@@ -16,6 +16,7 @@ public:
 
     void setSources(const QStringList &sources);
     QStringList sources() const;
+    QStringList enabledSources() const;
     // last-updated timestamps per subreddit (may be null/invalid if never updated)
     QMap<QString, QDateTime> lastUpdatedMap() const;
     void setLastUpdated(const QString &subreddit, const QDateTime &when);
@@ -26,6 +27,8 @@ public:
 
 signals:
     void sourcesChanged(const QStringList &sources);
+    // Emitted when the set of enabled (checked) subreddits changes
+    void enabledSourcesChanged(const QStringList &enabled);
 
 private:
     QListWidget *m_list = nullptr;

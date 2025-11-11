@@ -15,6 +15,7 @@ SourcesPanel::SourcesPanel(QWidget *parent)
 {
     qDebug() << "SourcesPanel ctor: start";
     m_list = new QListWidget(this);
+    m_list->setSelectionMode(QAbstractItemView::ExtendedSelection);
     qDebug() << "SourcesPanel ctor: created QListWidget";
     m_edit = new QLineEdit(this);
     qDebug() << "SourcesPanel ctor: created QLineEdit";
@@ -45,10 +46,14 @@ SourcesPanel::SourcesPanel(QWidget *parent)
         for (int i=0;i<m_list->count();++i) {
             if (m_list->item(i)->text().compare(txt, Qt::CaseInsensitive) == 0) return;
         }
-        m_list->addItem(txt);
+        auto *it = new QListWidgetItem(txt, m_list);
+        it->setFlags(it->flags() | Qt::ItemIsUserCheckable);
+        it->setCheckState(Qt::Checked);
+        m_list->addItem(it);
         m_edit->clear();
         QStringList s = sources();
         emit sourcesChanged(s);
+        emit enabledSourcesChanged(enabledSources());
     });
 
     connect(m_btnRemove, &QPushButton::clicked, this, [this]() {
@@ -58,19 +63,41 @@ SourcesPanel::SourcesPanel(QWidget *parent)
         }
         QStringList s = sources();
         emit sourcesChanged(s);
+        emit enabledSourcesChanged(enabledSources());
+    });
+
+    // react to manual check/uncheck changes
+    connect(m_list, &QListWidget::itemChanged, this, [this](QListWidgetItem *it){
+        Q_UNUSED(it);
+        emit enabledSourcesChanged(enabledSources());
     });
 }
 
 void SourcesPanel::setSources(const QStringList &sources)
 {
     m_list->clear();
-    for (const QString &s : sources) m_list->addItem(s);
+    for (const QString &s : sources) {
+        auto *it = new QListWidgetItem(s, m_list);
+        it->setFlags(it->flags() | Qt::ItemIsUserCheckable);
+        it->setCheckState(Qt::Checked);
+        m_list->addItem(it);
+    }
 }
 
 QStringList SourcesPanel::sources() const
 {
     QStringList out;
     for (int i=0;i<m_list->count();++i) out << m_list->item(i)->text();
+    return out;
+}
+
+QStringList SourcesPanel::enabledSources() const
+{
+    QStringList out;
+    for (int i=0;i<m_list->count();++i) {
+        QListWidgetItem *it = m_list->item(i);
+        if (it->checkState() == Qt::Checked) out << it->text();
+    }
     return out;
 }
 
@@ -86,35 +113,59 @@ bool SourcesPanel::loadFromFile(const QString &path)
     if (doc.isArray()) {
         QJsonArray arr = doc.array();
         for (const auto &v : arr) if (v.isString()) s << v.toString();
+        // array -> default all enabled
+        setSources(s);
     } else if (doc.isObject()) {
         QJsonObject obj = doc.object();
+        // expected format: { "subreddit": { "enabled": true, "last_updated": "..." }, ... }
         for (auto it = obj.constBegin(); it != obj.constEnd(); ++it) {
             const QString key = it.key();
             const QJsonValue v = it.value();
             s << key;
-            if (v.isString()) {
-                QDateTime dt = QDateTime::fromString(v.toString(), Qt::ISODate);
-                if (dt.isValid()) m_lastUpdated.insert(key, dt);
+            if (v.isObject()) {
+                QJsonObject entry = v.toObject();
+                if (entry.contains("last_updated") && entry.value("last_updated").isString()) {
+                    QDateTime dt = QDateTime::fromString(entry.value("last_updated").toString(), Qt::ISODate);
+                    if (dt.isValid()) m_lastUpdated.insert(key, dt);
+                }
             }
+        }
+        // now populate list with proper checked state
+        m_list->clear();
+        for (auto it = obj.constBegin(); it != obj.constEnd(); ++it) {
+            QString key = it.key();
+            QJsonValue v = it.value();
+            auto *itw = new QListWidgetItem(key, m_list);
+            itw->setFlags(itw->flags() | Qt::ItemIsUserCheckable);
+            bool enabled = true;
+            if (v.isObject()) {
+                QJsonObject entry = v.toObject();
+                if (entry.contains("enabled")) enabled = entry.value("enabled").toBool(true);
+            }
+            itw->setCheckState(enabled ? Qt::Checked : Qt::Unchecked);
+            m_list->addItem(itw);
         }
     } else {
         return false;
     }
-    setSources(s);
-    emit sourcesChanged(s);
+    QStringList all = sources();
+    emit sourcesChanged(all);
+    emit enabledSourcesChanged(enabledSources());
     return true;
 }
 
 bool SourcesPanel::saveToFile(const QString &path) const
 {
     QJsonObject obj;
-    // prefer saving as object mapping subreddit->ISO timestamp (or empty string)
-    for (const QString &s : sources()) {
-        if (m_lastUpdated.contains(s)) {
-            obj.insert(s, m_lastUpdated.value(s).toString(Qt::ISODate));
-        } else {
-            obj.insert(s, "");
-        }
+    // Save as object mapping subreddit-> { enabled: bool, last_updated: string }
+    for (int i=0;i<m_list->count();++i) {
+        QListWidgetItem *it = m_list->item(i);
+        QString s = it->text();
+        QJsonObject entry;
+        entry.insert("enabled", it->checkState() == Qt::Checked);
+        if (m_lastUpdated.contains(s)) entry.insert("last_updated", m_lastUpdated.value(s).toString(Qt::ISODate));
+        else entry.insert("last_updated", "");
+        obj.insert(s, entry);
     }
     QJsonDocument doc(obj);
     QFile f(path);

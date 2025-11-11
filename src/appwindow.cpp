@@ -124,6 +124,12 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
         // persist to config
         sourcesPanel_->saveToFile(sourcesPathConfig);
     });
+    // when enabled (checked) list changes, tell the thumbnail viewer to update its allowed set
+    connect(sourcesPanel_, &SourcesPanel::enabledSourcesChanged, this, [this](const QStringList &enabled){
+        qDebug() << "AppWindow: enabledSourcesChanged:" << enabled;
+        thumbnailViewer_->setAllowedSubreddits(enabled);
+        thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
+    });
     qDebug() << "AppWindow ctor: connected sourcesChanged";
 
     // Filtering panel will be created after the thumbnail viewer so we can set the target aspect safely.
@@ -439,7 +445,7 @@ void AppWindow::onUpdateCache() {
     QJsonObject root = readIndex(indexPath);
 
     // Prepare ordered subreddit list: never-updated first, then oldest
-    QStringList allSources = sourcesPanel_ ? sourcesPanel_->sources() : subscribedSubreddits_;
+    QStringList allSources = sourcesPanel_ ? sourcesPanel_->enabledSources() : subscribedSubreddits_;
     QMap<QString,QDateTime> lastMap = sourcesPanel_ ? sourcesPanel_->lastUpdatedMap() : QMap<QString,QDateTime>();
     QStringList neverUpdated;
     QVector<QPair<QString,QDateTime>> updated;

@@ -109,8 +109,12 @@ void ThumbnailViewer::addThumbnail(const QString &filePath, int row, int col)
             if (img.isNull()) return;
             QImage scaled = img.scaled(thumbSz, thumbSz, Qt::KeepAspectRatio, Qt::SmoothTransformation);
             // invoke the UI thread to set the pixmap using the functor overload (no metatype required)
-            QMetaObject::invokeMethod(viewer, [viewer, p, scaled]() {
-                viewer->onThumbnailLoaded(p, scaled);
+            // copy members into local variables so the lambda can capture them by value
+            ThumbnailViewer *v = viewer;
+            QString pathCopy = p;
+            QImage imgCopy = scaled;
+            QMetaObject::invokeMethod(v, [v, pathCopy, imgCopy]() {
+                v->onThumbnailLoaded(pathCopy, imgCopy);
             }, Qt::QueuedConnection);
         }
     private:
@@ -315,6 +319,11 @@ ThumbnailViewer::AspectFilterMode ThumbnailViewer::aspectFilterMode() const
     return m_filterMode;
 }
 
+void ThumbnailViewer::setAllowedSubreddits(const QStringList &allowed)
+{
+    m_allowedSubreddits = allowed;
+}
+
 bool ThumbnailViewer::acceptsImage(const QString &filePath) const
 {
     // cheap quick-check: extension + existence
@@ -327,6 +336,11 @@ bool ThumbnailViewer::acceptsImage(const QString &filePath) const
     QString fname = fi.fileName();
     if (!m_indexJson.isEmpty() && m_indexJson.contains(fname)) {
         QJsonObject entry = m_indexJson.value(fname).toObject();
+        // If allowed-subreddits list is non-empty, enforce it using index metadata
+        if (!m_allowedSubreddits.isEmpty()) {
+            QString sr = entry.value("subreddit").toString();
+            if (sr.isEmpty() || !m_allowedSubreddits.contains(sr)) return false;
+        }
         if (entry.contains("width") && entry.contains("height")) {
             int w = entry.value("width").toInt(0);
             int h = entry.value("height").toInt(0);
@@ -348,6 +362,12 @@ bool ThumbnailViewer::acceptsImage(const QString &filePath) const
     }
     if (sz.isEmpty()) return false;
     double ar = double(sz.width()) / double(sz.height());
+
+    // If allowed subreddits configured and we don't have index metadata for this
+    // file, conservatively reject (we don't know its subreddit).
+    if (!m_allowedSubreddits.isEmpty()) {
+        return false;
+    }
 
     if (m_filterMode == FilterExact) {
         return qAbs(ar - m_targetAspect) <= 0.03;
