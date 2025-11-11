@@ -32,6 +32,8 @@
 #include <QImageReader>
 #include <QImage>
 #include <QElapsedTimer>
+#include <QShowEvent>
+#include <QTimer>
 
 // Worker object to perform subreddit scanning & downloading in a background thread.
 class UpdateWorker : public QObject {
@@ -193,8 +195,7 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
         // reload thumbnails from cache so the filter takes effect immediately
         thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
     });
-    // load thumbnails from cache
-    thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
+    // initial load of thumbnails deferred until the window is shown to allow correct layout
     connect(thumbnailViewer_, &ThumbnailViewer::imageSelected, this, &AppWindow::onThumbnailSelected);
     // double-click (activate) should set the wallpaper immediately
     connect(thumbnailViewer_, &ThumbnailViewer::imageActivated, this, [this](const QString &imagePath){
@@ -253,6 +254,23 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
 }
 
 AppWindow::~AppWindow() {
+}
+
+void AppWindow::showEvent(QShowEvent *event)
+{
+    QWidget::showEvent(event);
+    if (!m_initialLoadDone) {
+        // Defer the initial load until after the first show/layout pass so
+        // that the scroll viewport has a valid size and column calculation is correct.
+        QTimer::singleShot(0, this, [this]() {
+            thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
+            // schedule a follow-up relayout after layouts settle to avoid a 1-column flash
+            QTimer::singleShot(80, thumbnailViewer_, [this]() {
+                thumbnailViewer_->relayoutGrid();
+            });
+        });
+        m_initialLoadDone = true;
+    }
 }
 
 void AppWindow::onNewRandom() {

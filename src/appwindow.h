@@ -49,4 +49,7 @@ private:
     QPushButton *btnThumbUp_ = nullptr;
     QPushButton *btnThumbDown_ = nullptr;
     QPushButton *btnPermaban_ = nullptr;
+    bool m_initialLoadDone = false;
+protected:
+    void showEvent(QShowEvent *event) override;
 };

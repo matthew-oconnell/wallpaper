@@ -24,9 +24,14 @@ public:
     // Load thumbnails from cache directory (e.g. ~/.cache/wallpaper)
     void loadFromCache(const QString &cacheDir);
     
+    // Public relayout API so external callers can request a recompute of columns
+    void relayoutGrid();
 public slots:
     // Add a single thumbnail from a file path (used for incremental updates)
     void addThumbnailFromPath(const QString &filePath);
+
+public:
+    int computeColumns() const;
 
 signals:
     // Emitted when user clicks a thumbnail; path is full filesystem path to image
@@ -68,6 +73,8 @@ private:
     QJsonObject m_indexJson;
     QString m_indexPath;
     QStringList m_allowedSubreddits;
+protected:
+    void resizeEvent(QResizeEvent *event) override;
 };
 
 #endif // THUMBNAILVIEWER_H

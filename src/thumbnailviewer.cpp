@@ -232,7 +232,7 @@ void ThumbnailViewer::loadFromCache(const QString &cacheDir)
         for (const QFileInfo &fi : files) fileList.append(fi);
     }
 
-    const int columns = 4;
+    const int columns = computeColumns();
     int row = 0, col = 0;
     for (const QFileInfo &fi : fileList) {
         scanned++;
@@ -245,9 +245,8 @@ void ThumbnailViewer::loadFromCache(const QString &cacheDir)
         if (col >= columns) { col = 0; row++; }
     }
 
-    // adjust container layout
-    // Keep container size stable; individual thumbnail labels use a fixed cell size
-    // so adding images won't cause the window to jump.
+    // After populating, ensure the widgets are laid out according to current viewport width
+    relayoutGrid();
     qDebug() << "ThumbnailViewer::loadFromCache: scanned=" << scanned << "accepted=" << accepted << "thumbs=" << m_labels.size() << "ms=" << timer.elapsed();
 }
 
@@ -260,13 +259,54 @@ void ThumbnailViewer::addThumbnailFromPath(const QString &filePath)
 {
     // compute next grid position
     int idx = m_labels.size();
-    const int columns = 4;
+    const int columns = computeColumns();
     int row = idx / columns;
     int col = idx % columns;
     // avoid adding duplicates
     if (hasThumbnailForFile(filePath)) return;
     if (!acceptsImage(filePath)) return;
     addThumbnail(filePath, row, col);
+}
+
+int ThumbnailViewer::computeColumns() const
+{
+    // compute how many columns fit in the scroll viewport given thumb size and spacing
+    int viewportWidth = m_scroll->viewport()->width();
+    // If the viewport hasn't been laid out yet, try fallbacks to get a reasonable width
+    if (viewportWidth <= 0) viewportWidth = m_scroll->width();
+    if (viewportWidth <= 0) {
+        QWidget *p = parentWidget();
+        if (p) viewportWidth = p->width();
+    }
+    if (viewportWidth <= 0) {
+        QScreen *screen = QGuiApplication::primaryScreen();
+        viewportWidth = screen ? screen->size().width() : 1024;
+    }
+    int hSpacing = m_grid->horizontalSpacing();
+    if (hSpacing < 0) hSpacing = 0;
+    int cell = m_thumbSize + hSpacing;
+    if (cell <= 0) return 1;
+    int cols = viewportWidth / cell;
+    if (cols < 1) cols = 1;
+    return cols;
+}
+
+void ThumbnailViewer::relayoutGrid()
+{
+    const int columns = computeColumns();
+    if (columns <= 1) {
+        // still ensure widgets are in first column sequentially
+    }
+    // Remove and re-add widgets in their original order
+    int idx = 0;
+    for (ClickableLabel *l : m_labels) {
+        m_grid->removeWidget(l);
+        int row = idx / columns;
+        int col = idx % columns;
+        m_grid->addWidget(l, row, col);
+        idx++;
+    }
+    m_container->updateGeometry();
 }
 
 bool ThumbnailViewer::hasThumbnailForFile(const QString &filePath) const
@@ -331,6 +371,13 @@ void ThumbnailViewer::setAllowedSubreddits(const QStringList &allowed)
         n = n.toLower();
         if (!n.isEmpty()) m_allowedSubreddits.append(n);
     }
+}
+
+void ThumbnailViewer::resizeEvent(QResizeEvent *event)
+{
+    QWidget::resizeEvent(event);
+    // Re-layout thumbnails to fit new width
+    relayoutGrid();
 }
 
 bool ThumbnailViewer::acceptsImage(const QString &filePath) const
