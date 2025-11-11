@@ -36,10 +36,73 @@
 #include <QRegularExpression>
 #include <QMessageBox>
 #include <QFont>
+#include <QRunnable>
+#include <QThreadPool>
+#include <QSet>
+#include <QMetaObject>
 
 // forward declarations for helper functions defined later in this file
 static QJsonObject readIndex(const QString &indexPath);
 static bool writeIndex(const QString &indexPath, const QJsonObject &rootObj);
+
+// CleanupTask: deletes cached images whose subreddit is not in the allowed set
+class CleanupTask : public QRunnable {
+public:
+    CleanupTask(const QString &cacheDir, const QSet<QString> &allowed, QObject *main)
+        : m_cacheDir(cacheDir), m_allowed(allowed), m_main(main) {}
+    void run() override {
+        QString indexPath = QDir(m_cacheDir).filePath("index.json");
+        QJsonObject root = readIndex(indexPath);
+        QStringList toRemove;
+        for (auto it = root.constBegin(); it != root.constEnd(); ++it) {
+            QString key = it.key();
+            QJsonObject entry = it.value().toObject();
+            QString sub = entry.value("subreddit").toString();
+            if (!sub.isEmpty() && !m_allowed.contains(sub)) {
+                toRemove << key;
+            }
+        }
+        for (const QString &k : toRemove) {
+            QJsonObject entry = root.value(k).toObject();
+            QString filepath = QDir(m_cacheDir).filePath(k);
+            QFile::remove(filepath);
+            QString thumb = entry.value("thumbnail").toString();
+            if (!thumb.isEmpty()) QFile::remove(QDir(m_cacheDir).filePath(thumb));
+            root.remove(k);
+        }
+        writeIndex(indexPath, root);
+
+        // refresh UI on main thread
+        if (m_main) {
+            QMetaObject::invokeMethod(m_main, "cleanupFinished", Qt::QueuedConnection);
+        }
+    }
+private:
+    QString m_cacheDir;
+    QSet<QString> m_allowed;
+    QObject *m_main;
+};
+
+void AppWindow::startCleanup()
+{
+    if (!btnCleanup_) return;
+    btnCleanup_->setEnabled(false);
+    QString cacheDir = m_cache.cacheDirPath();
+    QStringList allowed;
+    if (sourcesPanel_) allowed = sourcesPanel_->sources();
+    else allowed = subscribedSubreddits_;
+    QSet<QString> allowedSet;
+    for (const QString &s : allowed) allowedSet.insert(s);
+    QThreadPool::globalInstance()->start(new CleanupTask(cacheDir, allowedSet, this));
+}
+
+void AppWindow::cleanupFinished()
+{
+    // reload thumbnails and counts, re-enable cleanup button
+    thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
+    if (sourcesPanel_) sourcesPanel_->updateCounts(m_cache.cacheDirPath());
+    if (btnCleanup_) btnCleanup_->setEnabled(true);
+}
 
 AppWindow::AppWindow(QWidget *parent)
     : QWidget(parent)
@@ -58,7 +121,12 @@ AppWindow::AppWindow(QWidget *parent)
     sourcesPanel_->loadFromFile(sourcesPath);
     l->addWidget(sourcesPanel_);
     connect(sourcesPanel_, &SourcesPanel::enabledSourcesChanged, this, [this](const QStringList &enabled){
-        if (thumbnailViewer_) thumbnailViewer_->setAllowedSubreddits(enabled);
+        if (!thumbnailViewer_) return;
+        // update allowed subreddits and reload thumbnails so the filter takes effect immediately
+        thumbnailViewer_->setAllowedSubreddits(enabled);
+        thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
+        // update counts displayed in the sources panel
+        if (sourcesPanel_) sourcesPanel_->updateCounts(m_cache.cacheDirPath());
     });
 
     // persist any changes to the sources list
@@ -163,11 +231,18 @@ AppWindow::AppWindow(QWidget *parent)
         if (sourcesPanel_) sourcesPanel_->updateCounts(m_cache.cacheDirPath());
     });
     
-    // Manual update button (restore deleted control): triggers cache update
-    btnUpdate_ = new QPushButton("Update", this);
+    // Manual update and cleanup controls (restore deleted control):
+    btnUpdate_ = new QPushButton("Update Library", this);
     btnUpdate_->setToolTip("Fetch new images and update the cache/index");
-    l->addWidget(btnUpdate_);
+    btnCleanup_ = new QPushButton("Cleanup Library", this);
+    btnCleanup_->setToolTip("Remove cached images whose subreddit is no longer in the sources list");
+    // place buttons on one row
+    QHBoxLayout *updateRow = new QHBoxLayout();
+    updateRow->addWidget(btnUpdate_);
+    updateRow->addWidget(btnCleanup_);
+    l->addLayout(updateRow);
     connect(btnUpdate_, &QPushButton::clicked, this, &AppWindow::onUpdateCache);
+    connect(btnCleanup_, &QPushButton::clicked, this, &AppWindow::startCleanup);
     // initial load of thumbnails deferred until the window is shown to allow correct layout
     connect(thumbnailViewer_, &ThumbnailViewer::imageSelected, this, &AppWindow::onThumbnailSelected);
     // double-click (activate) should set the wallpaper immediately

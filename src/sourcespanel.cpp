@@ -5,6 +5,8 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
+#include <QMenu>
+#include <QAction>
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QJsonObject>
@@ -72,6 +74,22 @@ SourcesPanel::SourcesPanel(QWidget *parent)
     connect(m_list, &QListWidget::itemChanged, this, [this](QListWidgetItem *it){
         Q_UNUSED(it);
         emit enabledSourcesChanged(enabledSources());
+    });
+
+    // enable right-click context menu for quick removal
+    m_list->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_list, &QListWidget::customContextMenuRequested, this, [this](const QPoint &pt){
+        QListWidgetItem *it = m_list->itemAt(pt);
+        if (!it) return;
+        QMenu menu(m_list);
+        QAction *actRemove = menu.addAction("Remove");
+        QAction *chosen = menu.exec(m_list->viewport()->mapToGlobal(pt));
+        if (chosen == actRemove) {
+            delete it;
+            QStringList s = sources();
+            emit sourcesChanged(s);
+            emit enabledSourcesChanged(enabledSources());
+        }
     });
 }
 

@@ -414,6 +414,11 @@ bool ThumbnailViewer::acceptsImage(const QString &filePath) const
                 return false;
             }
         }
+        // Respect per-image 'banned' flag in index.json: don't show banned photos
+        if (entry.value("banned").toBool(false)) {
+            qDebug() << "ThumbnailViewer: rejecting" << fname << "because banned flag is set";
+            return false;
+        }
     } else {
         // If we don't have metadata and an allowlist is configured, reject
         if (!m_allowedSubreddits.isEmpty()) {

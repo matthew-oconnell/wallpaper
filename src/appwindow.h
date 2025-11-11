@@ -30,6 +30,8 @@ private slots:
     void onRandomFavorite();
     void onPermaban();
     void onUpdateCache();
+    void startCleanup();
+    void cleanupFinished();
 
 private:
     QSystemTrayIcon *trayIcon_ = nullptr;
@@ -44,6 +46,7 @@ private:
     QString currentWallpaperPath_;
     QStringList subscribedSubreddits_ = { "WidescreenWallpaper" };
     QPushButton *btnUpdate_ = nullptr;
+    QPushButton *btnCleanup_ = nullptr;
     QSpinBox *updateCountSpin_ = nullptr;
     SourcesPanel *sourcesPanel_ = nullptr;
     FiltersPanel *filtersPanel_ = nullptr;
