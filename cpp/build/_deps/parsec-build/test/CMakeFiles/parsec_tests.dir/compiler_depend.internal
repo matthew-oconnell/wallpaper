@@ -31,6 +31,10 @@
  /usr/share/cmake/Modules/FindPackageMessage.cmake
  /usr/share/cmake/Templates/CTestScript.cmake.in
 
+_deps/parsec-build/test/CMakeFiles/parsec_tests.dir/parsec_tests_autogen/mocs_compilation.cpp.o
+ /home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-build/test/parsec_tests_autogen/mocs_compilation.cpp
+ /usr/include/stdc-predef.h
+
 _deps/parsec-build/test/CMakeFiles/parsec_tests.dir/test_cli_parser_selection.cpp.o
  /home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/test_cli_parser_selection.cpp
  /home/matthew/Projects/wallpaper/cpp/build/_deps/catch2-build/generated-includes/catch2/catch_user_config.hpp
@@ -6796,6 +6800,7 @@ _deps/parsec-build/test/parsec_tests
  /usr/lib/libc_nonshared.a
  /usr/lib/libm.so.6
  /usr/lib/libmvec.so.1
+ /home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-build/test/CMakeFiles/parsec_tests.dir/parsec_tests_autogen/mocs_compilation.cpp.o
  /home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-build/test/CMakeFiles/parsec_tests.dir/test_cli_parser_selection.cpp.o
  /home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-build/test/CMakeFiles/parsec_tests.dir/test_comments.cpp.o
  /home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-build/test/CMakeFiles/parsec_tests.dir/test_dictionary.cpp.o

@@ -8,6 +8,7 @@
 #include <QVBoxLayout>
 #include <QPushButton>
 #include <QLabel>
+#include <QRandomGenerator>
 #include "redditfetcher.h"
 #include "cachemanager.h"
 
@@ -40,13 +41,36 @@ AppWindow::~AppWindow() {
 }
 
 void AppWindow::onNewRandom() {
-    // For now, synchronous simple demo: fetch URLs, download one, add to cache
-    RedditFetcher fetcher;
-    auto urls = fetcher.fetchRecentImageUrls("WidescreenWallpaper", 10);
-    if (urls.empty()) return;
-    CacheManager cache;
-    // choose random
-    std::string pick = urls[rand() % urls.size()];
-    auto path = cache.downloadAndCache(QString::fromStdString(pick));
-    trayIcon_->showMessage("Wallpaper", QString("Downloaded: %1").arg(path));
+    qDebug() << "Fetching new random wallpaper...";
+    
+    // Fetch image URLs from Reddit
+    std::vector<std::string> urls = m_fetcher.fetchRecentImageUrls("WidescreenWallpaper", 10);
+    
+    if (urls.empty()) {
+        qWarning() << "No image URLs found";
+        return;
+    }
+    
+    // Pick a random URL
+    int randomIndex = QRandomGenerator::global()->bounded(static_cast<int>(urls.size()));
+    QString selectedUrl = QString::fromStdString(urls[randomIndex]);
+    
+    qDebug() << "Selected URL:" << selectedUrl;
+    
+    // Download and cache the image
+    QString cachedPath = m_cache.downloadAndCache(selectedUrl);
+    
+    if (cachedPath.isEmpty()) {
+        qWarning() << "Failed to download image";
+        return;
+    }
+    
+    qDebug() << "Image cached at:" << cachedPath;
+    
+    // Set the wallpaper using the cached image
+    if (wallpaperSetter_.setWallpaper(cachedPath)) {
+        qDebug() << "Wallpaper set successfully!";
+    } else {
+        qWarning() << "Failed to set wallpaper";
+    }
 }

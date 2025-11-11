@@ -279,6 +279,9 @@ _deps/catch2-build/src/Catch2_autogen/timestamp: _deps/catch2-build/generated-in
   /usr/bin/cmake \
   /usr/share/cmake/Modules/CheckCXXCompilerFlag.cmake
 
+_deps/catch2-build/src/CMakeFiles/Catch2.dir/Catch2_autogen/mocs_compilation.cpp.o: _deps/catch2-build/src/Catch2_autogen/mocs_compilation.cpp \
+  /usr/include/stdc-predef.h
+
 _deps/catch2-build/src/CMakeFiles/Catch2.dir/catch2/benchmark/catch_chronometer.cpp.o: _deps/catch2-src/src/catch2/benchmark/catch_chronometer.cpp \
   _deps/catch2-src/src/catch2/benchmark/catch_chronometer.hpp \
   _deps/catch2-src/src/catch2/benchmark/catch_clock.hpp \
@@ -21243,6 +21246,8 @@ _deps/catch2-src/src/catch2/internal/catch_preprocessor_internal_stringify.hpp:
 
 /usr/include/c++/15.2.1/bits/stl_multimap.h:
 
+/usr/include/c++/15.2.1/bits/stl_map.h:
+
 _deps/catch2-src/src/catch2/reporters/catch_reporter_console.hpp:
 
 /usr/include/c++/15.2.1/cassert:
@@ -21913,6 +21918,8 @@ _deps/catch2-src/src/catch2/internal/catch_getenv.cpp:
 
 /usr/include/bits/stdint-least.h:
 
+_deps/catch2-build/src/Catch2_autogen/mocs_compilation.cpp:
+
 /usr/include/bits/endian.h:
 
 /usr/include/bits/endianness.h:
@@ -22036,8 +22043,6 @@ _deps/catch2-src/src/catch2/internal/catch_parse_numbers.cpp:
 _deps/catch2-src/src/catch2/benchmark/detail/catch_benchmark_stats_fwd.hpp:
 
 /usr/include/asm-generic/posix_types.h:
-
-/usr/include/c++/15.2.1/bits/stl_map.h:
 
 /usr/include/signal.h:
 

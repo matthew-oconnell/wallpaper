@@ -1,5 +1,8 @@
 /home/matthew/Projects/wallpaper/cpp/build/wallpaper-cpp_autogen/UVLADIE3JM/moc_appwindow.cpp: /home/matthew/Projects/wallpaper/cpp/src/appwindow.h \
   /home/matthew/Projects/wallpaper/cpp/build/wallpaper-cpp_autogen/moc_predefs.h \
+  /home/matthew/Projects/wallpaper/cpp/src/cachemanager.h \
+  /home/matthew/Projects/wallpaper/cpp/src/redditfetcher.h \
+  /home/matthew/Projects/wallpaper/cpp/src/wallpapersetter.h \
   /usr/include/alloca.h \
   /usr/include/asm-generic/bitsperlong.h \
   /usr/include/asm-generic/errno-base.h \
@@ -265,6 +268,8 @@
   /usr/include/linux/types.h \
   /usr/include/locale.h \
   /usr/include/pthread.h \
+  /usr/include/qt6/QtCore/QString \
+  /usr/include/qt6/QtCore/QStringList \
   /usr/include/qt6/QtCore/q17memory.h \
   /usr/include/qt6/QtCore/q20functional.h \
   /usr/include/qt6/QtCore/q20iterator.h \

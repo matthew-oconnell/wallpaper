@@ -855,6 +855,30 @@ src/redditfetcher.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/wallpaper-cpp.dir/build.make CMakeFiles/wallpaper-cpp.dir/src/redditfetcher.cpp.s
 .PHONY : src/redditfetcher.cpp.s
 
+src/wallpapersetter.o: src/wallpapersetter.cpp.o
+.PHONY : src/wallpapersetter.o
+
+# target to build an object file
+src/wallpapersetter.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wallpaper-cpp.dir/build.make CMakeFiles/wallpaper-cpp.dir/src/wallpapersetter.cpp.o
+.PHONY : src/wallpapersetter.cpp.o
+
+src/wallpapersetter.i: src/wallpapersetter.cpp.i
+.PHONY : src/wallpapersetter.i
+
+# target to preprocess a source file
+src/wallpapersetter.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wallpaper-cpp.dir/build.make CMakeFiles/wallpaper-cpp.dir/src/wallpapersetter.cpp.i
+.PHONY : src/wallpapersetter.cpp.i
+
+src/wallpapersetter.s: src/wallpapersetter.cpp.s
+.PHONY : src/wallpapersetter.s
+
+# target to generate assembly for a file
+src/wallpapersetter.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wallpaper-cpp.dir/build.make CMakeFiles/wallpaper-cpp.dir/src/wallpapersetter.cpp.s
+.PHONY : src/wallpapersetter.cpp.s
+
 wallpaper-cpp_autogen/mocs_compilation.o: wallpaper-cpp_autogen/mocs_compilation.cpp.o
 .PHONY : wallpaper-cpp_autogen/mocs_compilation.o
 
@@ -949,6 +973,9 @@ help:
 	@echo "... src/redditfetcher.o"
 	@echo "... src/redditfetcher.i"
 	@echo "... src/redditfetcher.s"
+	@echo "... src/wallpapersetter.o"
+	@echo "... src/wallpapersetter.i"
+	@echo "... src/wallpapersetter.s"
 	@echo "... wallpaper-cpp_autogen/mocs_compilation.o"
 	@echo "... wallpaper-cpp_autogen/mocs_compilation.i"
 	@echo "... wallpaper-cpp_autogen/mocs_compilation.s"

@@ -355,4 +355,10 @@ CMakeFiles/wallpaper-cpp.dir/src/main.cpp.o: \
  /usr/include/qt6/QtCore/qendian.h /usr/include/qt6/QtGui/qfontmetrics.h \
  /usr/include/qt6/QtGui/qfontinfo.h \
  /usr/include/qt6/QtGui/qfontvariableaxis.h \
- /usr/include/qt6/QtWidgets/qsizepolicy.h
+ /usr/include/qt6/QtWidgets/qsizepolicy.h \
+ /home/matthew/Projects/wallpaper/cpp/src/wallpapersetter.h \
+ /usr/include/qt6/QtCore/QString /usr/include/qt6/QtCore/qstring.h \
+ /usr/include/qt6/QtCore/QStringList \
+ /usr/include/qt6/QtCore/qstringlist.h \
+ /home/matthew/Projects/wallpaper/cpp/src/redditfetcher.h \
+ /home/matthew/Projects/wallpaper/cpp/src/cachemanager.h

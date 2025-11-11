@@ -11,6 +11,10 @@
  /home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/src/src/validate.cpp
  /usr/bin/cmake
 
+_deps/parsec-build/src/CMakeFiles/parsec_lib.dir/parsec_lib_autogen/mocs_compilation.cpp.o
+ /home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-build/src/parsec_lib_autogen/mocs_compilation.cpp
+ /usr/include/stdc-predef.h
+
 _deps/parsec-build/src/CMakeFiles/parsec_lib.dir/src/defaults.cpp.o
  /home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/src/src/defaults.cpp
  /home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/src/include/ps/dictionary.hpp

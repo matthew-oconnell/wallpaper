@@ -30,6 +30,9 @@ _deps/parsec-build/test/parsec_tests_autogen/timestamp: _deps/catch2-src/extras/
   /usr/share/cmake/Modules/FindPackageMessage.cmake \
   /usr/share/cmake/Templates/CTestScript.cmake.in
 
+_deps/parsec-build/test/CMakeFiles/parsec_tests.dir/parsec_tests_autogen/mocs_compilation.cpp.o: _deps/parsec-build/test/parsec_tests_autogen/mocs_compilation.cpp \
+  /usr/include/stdc-predef.h
+
 _deps/parsec-build/test/CMakeFiles/parsec_tests.dir/test_cli_parser_selection.cpp.o: _deps/parsec-src/test/test_cli_parser_selection.cpp \
   _deps/catch2-build/generated-includes/catch2/catch_user_config.hpp \
   _deps/catch2-src/src/catch2/benchmark/catch_benchmark.hpp \
@@ -6780,6 +6783,7 @@ _deps/parsec-build/test/parsec_tests: _deps/catch2-build/src/libCatch2Maind.a \
   /usr/lib/libc_nonshared.a \
   /usr/lib/libm.so.6 \
   /usr/lib/libmvec.so.1 \
+  _deps/parsec-build/test/CMakeFiles/parsec_tests.dir/parsec_tests_autogen/mocs_compilation.cpp.o \
   _deps/parsec-build/test/CMakeFiles/parsec_tests.dir/test_cli_parser_selection.cpp.o \
   _deps/parsec-build/test/CMakeFiles/parsec_tests.dir/test_comments.cpp.o \
   _deps/parsec-build/test/CMakeFiles/parsec_tests.dir/test_dictionary.cpp.o \
@@ -6812,15 +6816,13 @@ _deps/parsec-build/test/CMakeFiles/parsec_tests.dir/test_dictionary.cpp.o:
 
 _deps/parsec-build/test/CMakeFiles/parsec_tests.dir/test_cli_parser_selection.cpp.o:
 
-/usr/include/bits/types/__FILE.h:
+_deps/parsec-build/test/CMakeFiles/parsec_tests.dir/parsec_tests_autogen/mocs_compilation.cpp.o:
+
+/usr/lib/libm.so.6:
 
 /usr/include/bits/thread-shared-types.h:
 
 /usr/include/c++/15.2.1/ios:
-
-/usr/include/bits/sched.h:
-
-/usr/include/bits/struct_rwlock.h:
 
 /usr/include/bits/struct_mutex.h:
 
@@ -6990,6 +6992,12 @@ _deps/catch2-src/src/catch2/internal/catch_source_line_info.hpp:
 
 _deps/catch2-src/src/catch2/internal/catch_list.hpp:
 
+/usr/include/bits/struct_rwlock.h:
+
+/usr/include/bits/sched.h:
+
+/usr/include/bits/types/__FILE.h:
+
 _deps/catch2-src/src/catch2/internal/catch_section.hpp:
 
 /usr/include/c++/15.2.1/pstl/pstl_config.h:
@@ -7036,15 +7044,11 @@ _deps/catch2-src/src/catch2/internal/catch_parse_numbers.hpp:
 
 /usr/include/sys/cdefs.h:
 
-_deps/catch2-src/src/catch2/reporters/catch_reporter_streaming_base.hpp:
-
-_deps/catch2-src/src/catch2/catch_message.hpp:
+_deps/catch2-src/src/catch2/internal/catch_optional.hpp:
 
 _deps/catch2-src/src/catch2/catch_assertion_info.hpp:
 
 _deps/catch2-src/src/catch2/internal/catch_exception_translator_registry.hpp:
-
-_deps/catch2-src/src/catch2/internal/catch_optional.hpp:
 
 /usr/include/c++/15.2.1/type_traits:
 
@@ -7101,6 +7105,8 @@ _deps/catch2-src/src/catch2/matchers/internal/catch_matchers_impl.hpp:
 /usr/include/c++/15.2.1/bits/ios_base.h:
 
 /usr/share/cmake/Modules/FindPackageMessage.cmake:
+
+_deps/catch2-src/src/catch2/catch_session.hpp:
 
 /usr/include/bits/time64.h:
 
@@ -7182,6 +7188,10 @@ _deps/catch2-src/src/catch2/catch_approx.hpp:
 
 /usr/include/bits/types/__fpos64_t.h:
 
+/usr/share/cmake/Modules/ExternalProject/shared_internal_commands.cmake:
+
+/usr/include/bits/cpu-set.h:
+
 /usr/include/c++/15.2.1/bits/streambuf.tcc:
 
 _deps/catch2-src/src/catch2/internal/catch_random_number_generator.hpp:
@@ -7193,6 +7203,8 @@ _deps/catch2-src/src/catch2/catch_section_info.hpp:
 /usr/include/c++/15.2.1/streambuf:
 
 _deps/catch2-src/src/catch2/benchmark/catch_environment.hpp:
+
+_deps/parsec-build/test/parsec_tests_autogen/mocs_compilation.cpp:
 
 _deps/catch2-src/src/catch2/catch_get_random_seed.hpp:
 
@@ -7207,12 +7219,6 @@ _deps/catch2-src/src/catch2/internal/catch_reporter_registry.hpp:
 /usr/include/c++/15.2.1/bits/nested_exception.h:
 
 _deps/catch2-src/src/catch2/internal/catch_wildcard_pattern.hpp:
-
-/usr/include/bits/cpu-set.h:
-
-/usr/share/cmake/Modules/ExternalProject/shared_internal_commands.cmake:
-
-_deps/catch2-src/src/catch2/catch_session.hpp:
 
 _deps/catch2-src/src/catch2/interfaces/catch_interfaces_tag_alias_registry.hpp:
 
@@ -7237,6 +7243,10 @@ _deps/parsec-src/src/include/ps/validate.hpp:
 _deps/catch2-src/src/catch2/matchers/catch_matchers_predicate.hpp:
 
 /usr/share/cmake/Templates/CTestScript.cmake.in:
+
+_deps/catch2-src/src/catch2/reporters/catch_reporter_streaming_base.hpp:
+
+_deps/catch2-src/src/catch2/catch_message.hpp:
 
 /usr/include/asm-generic/errno-base.h:
 
@@ -7419,6 +7429,10 @@ _deps/catch2-src/src/catch2/benchmark/detail/catch_benchmark_stats_fwd.hpp:
 /usr/include/asm-generic/posix_types.h:
 
 /usr/include/c++/15.2.1/bits/stl_map.h:
+
+/usr/include/stdc-predef.h:
+
+/usr/include/c++/15.2.1/bits/stl_tempbuf.h:
 
 _deps/catch2-src/src/catch2/internal/catch_textflow.hpp:
 
@@ -7688,10 +7702,6 @@ _deps/parsec-src/test/test_parse_errors.cpp:
 
 /usr/include/c++/15.2.1/bits/stl_raw_storage_iter.h:
 
-/usr/include/c++/15.2.1/bits/stl_tempbuf.h:
-
-/usr/include/stdc-predef.h:
-
 /usr/include/c++/15.2.1/bits/stl_tree.h:
 
 /usr/include/c++/15.2.1/pstl/glue_algorithm_defs.h:
@@ -7905,5 +7915,3 @@ _deps/catch2-src/src/catch2/benchmark/catch_estimate.hpp:
 _deps/catch2-src/src/catch2/interfaces/catch_interfaces_generatortracker.hpp:
 
 /usr/lib/libc_nonshared.a:
-
-/usr/lib/libm.so.6:

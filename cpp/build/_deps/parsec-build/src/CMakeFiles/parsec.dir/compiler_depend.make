@@ -5,6 +5,9 @@ _deps/parsec-build/src/parsec_autogen/timestamp: _deps/parsec-src/src/CMakeLists
   _deps/parsec-src/src/src/main.cpp \
   /usr/bin/cmake
 
+_deps/parsec-build/src/CMakeFiles/parsec.dir/parsec_autogen/mocs_compilation.cpp.o: _deps/parsec-build/src/parsec_autogen/mocs_compilation.cpp \
+  /usr/include/stdc-predef.h
+
 _deps/parsec-build/src/CMakeFiles/parsec.dir/src/main.cpp.o: _deps/parsec-src/src/src/main.cpp \
   _deps/parsec-src/src/include/ps/dictionary.hpp \
   _deps/parsec-src/src/include/ps/parse.hpp \
@@ -287,11 +290,14 @@ _deps/parsec-build/src/parsec: /usr/lib/Scrt1.o \
   /usr/lib/libc_nonshared.a \
   /usr/lib/libm.so.6 \
   /usr/lib/libmvec.so.1 \
+  _deps/parsec-build/src/CMakeFiles/parsec.dir/parsec_autogen/mocs_compilation.cpp.o \
   _deps/parsec-build/src/CMakeFiles/parsec.dir/src/main.cpp.o \
   _deps/parsec-build/src/libparsec_lib.a
 
 
 _deps/parsec-build/src/libparsec_lib.a:
+
+_deps/parsec-build/src/CMakeFiles/parsec.dir/parsec_autogen/mocs_compilation.cpp.o:
 
 /usr/lib/libmvec.so.1:
 
@@ -327,9 +333,7 @@ _deps/parsec-build/src/libparsec_lib.a:
 
 /usr/include/sys/cdefs.h:
 
-/usr/include/c++/15.2.1/bits/monostate.h:
-
-/usr/include/c++/15.2.1/bits/concept_check.h:
+/usr/include/stdlib.h:
 
 /usr/include/c++/15.2.1/cstdio:
 
@@ -358,6 +362,10 @@ _deps/parsec-build/src/libparsec_lib.a:
 /usr/include/c++/15.2.1/bits/exception.h:
 
 /usr/include/c++/15.2.1/bits/cxxabi_init_exception.h:
+
+/usr/include/c++/15.2.1/bits/concept_check.h:
+
+/usr/include/c++/15.2.1/bits/monostate.h:
 
 /usr/include/c++/15.2.1/bits/memory_resource.h:
 
@@ -447,7 +455,13 @@ _deps/parsec-build/src/libparsec_lib.a:
 
 /usr/bin/cmake:
 
-/usr/include/bits/floatn-common.h:
+/usr/include/c++/15.2.1/bits/allocated_ptr.h:
+
+/usr/include/c++/15.2.1/istream:
+
+/usr/include/bits/types/clock_t.h:
+
+/usr/include/bits/types/__fpos_t.h:
 
 /usr/include/bits/errno.h:
 
@@ -477,17 +491,33 @@ _deps/parsec-src/src/include/ps/parsec.hpp:
 
 _deps/parsec-src/src/include/ps/parse.hpp:
 
+_deps/parsec-build/src/parsec_autogen/mocs_compilation.cpp:
+
+/usr/include/c++/15.2.1/bits/hashtable.h:
+
+/usr/include/bits/floatn.h:
+
+/usr/include/bits/types/error_t.h:
+
+/usr/include/c++/15.2.1/bits/requires_hosted.h:
+
+_deps/parsec-src/src/src/main.cpp:
+
+/usr/include/c++/15.2.1/bits/nested_exception.h:
+
+/usr/include/c++/15.2.1/bits/enable_special_members.h:
+
+/usr/include/c++/15.2.1/bits/stringfwd.h:
+
 /usr/include/c++/15.2.1/bit:
 
 /usr/include/c++/15.2.1/bits/basic_ios.h:
 
-/usr/include/c++/15.2.1/bits/allocated_ptr.h:
+_deps/parsec-src/src/CMakeLists.txt:
 
-/usr/include/c++/15.2.1/istream:
+/usr/include/c++/15.2.1/bits/stl_tempbuf.h:
 
-/usr/include/bits/types/clock_t.h:
-
-/usr/include/bits/types/__fpos_t.h:
+/usr/include/stdc-predef.h:
 
 /usr/include/asm-generic/errno-base.h:
 
@@ -501,11 +531,17 @@ _deps/parsec-build/src/CMakeFiles/parsec.dir/src/main.cpp.o:
 
 /usr/include/bits/setjmp.h:
 
-/usr/include/c++/15.2.1/bits/hashtable.h:
+/usr/lib/gcc/x86_64-pc-linux-gnu/15.2.1/include/stddef.h:
 
-/usr/include/bits/floatn.h:
+_deps/parsec-src/src/include/ps/validate.hpp:
+
+/usr/include/asm-generic/int-ll64.h:
 
 /usr/include/bits/byteswap.h:
+
+/usr/include/asm-generic/posix_types.h:
+
+/usr/include/c++/15.2.1/bits/stl_map.h:
 
 /usr/include/c++/15.2.1/bits/allocator.h:
 
@@ -547,33 +583,7 @@ _deps/parsec-src/src/include/ps/simple_json.hpp:
 
 /usr/include/bits/stdint-least.h:
 
-/usr/include/c++/15.2.1/bits/stl_map.h:
-
-/usr/include/asm-generic/posix_types.h:
-
-_deps/parsec-src/src/CMakeLists.txt:
-
-/usr/include/c++/15.2.1/bits/stl_tempbuf.h:
-
-/usr/include/stdc-predef.h:
-
-/usr/lib/gcc/x86_64-pc-linux-gnu/15.2.1/include/stddef.h:
-
-/usr/include/asm-generic/int-ll64.h:
-
-_deps/parsec-src/src/include/ps/validate.hpp:
-
-/usr/include/bits/types/error_t.h:
-
-/usr/include/c++/15.2.1/bits/requires_hosted.h:
-
-_deps/parsec-src/src/src/main.cpp:
-
-/usr/include/c++/15.2.1/bits/nested_exception.h:
-
-/usr/include/c++/15.2.1/bits/enable_special_members.h:
-
-/usr/include/c++/15.2.1/bits/stringfwd.h:
+/usr/include/bits/floatn-common.h:
 
 /usr/include/bits/libc-header-start.h:
 
@@ -597,11 +607,11 @@ _deps/parsec-src/src/src/main.cpp:
 
 /usr/include/bits/types/cookie_io_functions_t.h:
 
-_deps/parsec-src/src/include/ps/dictionary.hpp:
-
 _deps/parsec-src/src/include/ps/ron.hpp:
 
 /usr/include/c++/15.2.1/cstdlib:
+
+_deps/parsec-src/src/include/ps/dictionary.hpp:
 
 /usr/include/c++/15.2.1/bits/stl_algobase.h:
 
@@ -616,6 +626,10 @@ _deps/parsec-src/src/include/ps/ron.hpp:
 /usr/include/bits/stdint-intn.h:
 
 /usr/include/bits/types/time_t.h:
+
+/usr/include/c++/15.2.1/bits/range_access.h:
+
+/usr/include/c++/15.2.1/x86_64-pc-linux-gnu/bits/c++allocator.h:
 
 /usr/include/c++/15.2.1/ios:
 
@@ -676,10 +690,6 @@ _deps/parsec-src/src/include/ps/ron.hpp:
 /usr/include/c++/15.2.1/bits/ptr_traits.h:
 
 /usr/include/c++/15.2.1/bits/postypes.h:
-
-/usr/include/c++/15.2.1/x86_64-pc-linux-gnu/bits/c++allocator.h:
-
-/usr/include/c++/15.2.1/bits/range_access.h:
 
 /usr/include/sys/single_threaded.h:
 
@@ -814,8 +824,6 @@ _deps/parsec-src/src/include/ps/ron.hpp:
 /usr/include/c++/15.2.1/string_view:
 
 /usr/include/c++/15.2.1/typeinfo:
-
-/usr/include/stdlib.h:
 
 /usr/include/c++/15.2.1/initializer_list:
 

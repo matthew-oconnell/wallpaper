@@ -7,6 +7,7 @@ wallpaper-cpp: \
   CMakeFiles/wallpaper-cpp.dir/src/appwindow.cpp.o \
   CMakeFiles/wallpaper-cpp.dir/src/cachemanager.cpp.o \
   CMakeFiles/wallpaper-cpp.dir/src/redditfetcher.cpp.o \
+  CMakeFiles/wallpaper-cpp.dir/src/wallpapersetter.cpp.o \
   /usr/lib/libQt6Widgets.so.6.10.0 \
   /usr/lib/libQt6Network.so.6.10.0 \
   /usr/lib/libQt6Gui.so.6.10.0 \
@@ -148,6 +149,8 @@ CMakeFiles/wallpaper-cpp.dir/src/appwindow.cpp.o:
 CMakeFiles/wallpaper-cpp.dir/src/cachemanager.cpp.o:
 
 CMakeFiles/wallpaper-cpp.dir/src/redditfetcher.cpp.o:
+
+CMakeFiles/wallpaper-cpp.dir/src/wallpapersetter.cpp.o:
 
 /usr/lib/libQt6Widgets.so.6.10.0:
 

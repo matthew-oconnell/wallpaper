@@ -11,6 +11,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/wallpaper-cpp.dir/src/main.cpp.o.d"
   "CMakeFiles/wallpaper-cpp.dir/src/redditfetcher.cpp.o"
   "CMakeFiles/wallpaper-cpp.dir/src/redditfetcher.cpp.o.d"
+  "CMakeFiles/wallpaper-cpp.dir/src/wallpapersetter.cpp.o"
+  "CMakeFiles/wallpaper-cpp.dir/src/wallpapersetter.cpp.o.d"
   "CMakeFiles/wallpaper-cpp.dir/wallpaper-cpp_autogen/mocs_compilation.cpp.o"
   "CMakeFiles/wallpaper-cpp.dir/wallpaper-cpp_autogen/mocs_compilation.cpp.o.d"
   "wallpaper-cpp"

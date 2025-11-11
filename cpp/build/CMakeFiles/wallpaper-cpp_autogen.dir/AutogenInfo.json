@@ -482,6 +482,12 @@
 			"MU",
 			"UVLADIE3JM/moc_redditfetcher.cpp",
 			null
+		],
+		[
+			"/home/matthew/Projects/wallpaper/cpp/src/wallpapersetter.h",
+			"MU",
+			"UVLADIE3JM/moc_wallpapersetter.cpp",
+			null
 		]
 	],
 	"HEADER_EXTENSIONS" : [ "h", "hh", "h++", "hm", "hpp", "hxx", "in", "txx" ],
@@ -554,6 +560,11 @@
 		[ "/home/matthew/Projects/wallpaper/cpp/src/main.cpp", "MU", null ],
 		[
 			"/home/matthew/Projects/wallpaper/cpp/src/redditfetcher.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/matthew/Projects/wallpaper/cpp/src/wallpapersetter.cpp",
 			"MU",
 			null
 		]

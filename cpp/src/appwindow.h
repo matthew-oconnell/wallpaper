@@ -1,6 +1,9 @@
 #pragma once
 
 #include <QWidget>
+#include "wallpapersetter.h"
+#include "redditfetcher.h"
+#include "cachemanager.h"
 
 class QSystemTrayIcon;
 
@@ -15,4 +18,7 @@ private slots:
 
 private:
     QSystemTrayIcon *trayIcon_ = nullptr;
+    WallpaperSetter wallpaperSetter_;
+    RedditFetcher m_fetcher;
+    CacheManager m_cache;
 };

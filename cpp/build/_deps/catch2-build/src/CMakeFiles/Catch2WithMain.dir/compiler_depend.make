@@ -8,6 +8,9 @@ _deps/catch2-build/src/Catch2WithMain_autogen/timestamp: _deps/catch2-src/CMake/
   /usr/bin/cmake \
   /usr/share/cmake/Modules/CheckCXXCompilerFlag.cmake
 
+_deps/catch2-build/src/CMakeFiles/Catch2WithMain.dir/Catch2WithMain_autogen/mocs_compilation.cpp.o: _deps/catch2-build/src/Catch2WithMain_autogen/mocs_compilation.cpp \
+  /usr/include/stdc-predef.h
+
 _deps/catch2-build/src/CMakeFiles/Catch2WithMain.dir/catch2/internal/catch_main.cpp.o: _deps/catch2-src/src/catch2/internal/catch_main.cpp \
   _deps/catch2-build/generated-includes/catch2/catch_user_config.hpp \
   _deps/catch2-src/src/catch2/catch_config.hpp \
@@ -299,6 +302,8 @@ _deps/catch2-build/src/CMakeFiles/Catch2WithMain.dir/catch2/internal/catch_main.
 
 /usr/include/sched.h:
 
+/usr/include/locale.h:
+
 /usr/include/c++/15.2.1/bits/exception.h:
 
 /usr/include/stdio.h:
@@ -335,19 +340,11 @@ _deps/catch2-src/src/catch2/internal/catch_console_colour.hpp:
 
 /usr/include/c++/15.2.1/bits/char_traits.h:
 
-/usr/include/stdc-predef.h:
-
-/usr/include/c++/15.2.1/bits/stl_tempbuf.h:
-
 /usr/include/bits/types/struct_tm.h:
 
 /usr/include/c++/15.2.1/ext/atomicity.h:
 
 /usr/include/bits/types/struct_timespec.h:
-
-/usr/include/c++/15.2.1/vector:
-
-/usr/include/c++/15.2.1/bits/exception_defines.h:
 
 /usr/include/bits/waitflags.h:
 
@@ -397,13 +394,13 @@ _deps/catch2-src/src/catch2/internal/catch_random_seed_generation.hpp:
 
 /usr/include/bits/stdint-least.h:
 
-/usr/include/c++/15.2.1/bits/ostream.h:
-
 /usr/include/bits/pthread_stack_min-dynamic.h:
 
 /usr/include/c++/15.2.1/pstl/pstl_config.h:
 
-/usr/include/bits/pthreadtypes.h:
+/usr/include/bits/setjmp.h:
+
+_deps/catch2-src/src/catch2/internal/catch_platform.hpp:
 
 /usr/include/ctype.h:
 
@@ -414,6 +411,12 @@ _deps/catch2-src/src/catch2/internal/catch_unique_ptr.hpp:
 /usr/lib/gcc/x86_64-pc-linux-gnu/15.2.1/include/stddef.h:
 
 /usr/include/asm-generic/int-ll64.h:
+
+/usr/include/bits/wchar.h:
+
+/usr/include/bits/types/struct___jmp_buf_tag.h:
+
+/usr/include/bits/waitstatus.h:
 
 /usr/include/bits/timesize.h:
 
@@ -441,21 +444,49 @@ _deps/catch2-src/src/catch2/internal/catch_main.cpp:
 
 _deps/catch2-src/src/catch2/catch_test_spec.hpp:
 
+_deps/catch2-src/src/catch2/internal/catch_reporter_spec_parser.hpp:
+
+/usr/include/c++/15.2.1/bits/chrono.h:
+
+/usr/include/bits/struct_rwlock.h:
+
+_deps/catch2-src/src/catch2/internal/catch_case_sensitive.hpp:
+
+/usr/include/bits/uintn-identity.h:
+
+/usr/include/bits/endianness.h:
+
+/usr/include/c++/15.2.1/bits/parse_numbers.h:
+
+/usr/include/c++/15.2.1/x86_64-pc-linux-gnu/bits/atomic_word.h:
+
+/usr/include/bits/types/__FILE.h:
+
+/usr/include/bits/sched.h:
+
+/usr/include/features.h:
+
 _deps/catch2-src/src/catch2/interfaces/catch_interfaces_config.hpp:
 
 /usr/include/c++/15.2.1/sstream:
+
+/usr/include/c++/15.2.1/bit:
+
+/usr/include/c++/15.2.1/bits/basic_ios.h:
 
 _deps/catch2-src/src/catch2/internal/catch_void_type.hpp:
 
 _deps/catch2-src/src/catch2/catch_user_config.hpp.in:
 
-/usr/include/c++/15.2.1/bits/exception_ptr.h:
-
-/usr/include/c++/15.2.1/bits/stl_multimap.h:
+_deps/catch2-build/src/Catch2WithMain_autogen/mocs_compilation.cpp:
 
 /usr/include/asm-generic/errno-base.h:
 
 _deps/catch2-src/src/catch2/catch_config.hpp:
+
+/usr/include/bits/stdint-intn.h:
+
+/usr/include/bits/types/clockid_t.h:
 
 /usr/include/bits/atomic_wide_counter.h:
 
@@ -475,46 +506,6 @@ _deps/catch2-src/src/catch2/internal/catch_move_and_forward.hpp:
 
 _deps/catch2-src/src/CMakeLists.txt:
 
-/usr/include/bits/wchar.h:
-
-/usr/include/bits/waitstatus.h:
-
-/usr/include/bits/types/struct___jmp_buf_tag.h:
-
-_deps/catch2-src/src/catch2/internal/catch_platform.hpp:
-
-/usr/include/bits/setjmp.h:
-
-_deps/catch2-src/src/catch2/internal/catch_reporter_spec_parser.hpp:
-
-/usr/include/bits/types/clockid_t.h:
-
-/usr/include/bits/stdint-intn.h:
-
-/usr/include/c++/15.2.1/bits/chrono.h:
-
-/usr/include/bits/struct_rwlock.h:
-
-_deps/catch2-src/src/catch2/internal/catch_case_sensitive.hpp:
-
-/usr/include/c++/15.2.1/bits/basic_ios.h:
-
-/usr/include/c++/15.2.1/bit:
-
-/usr/include/bits/uintn-identity.h:
-
-/usr/include/bits/endianness.h:
-
-/usr/include/c++/15.2.1/bits/parse_numbers.h:
-
-/usr/include/c++/15.2.1/x86_64-pc-linux-gnu/bits/atomic_word.h:
-
-/usr/include/bits/types/__FILE.h:
-
-/usr/include/bits/sched.h:
-
-/usr/include/features.h:
-
 _deps/catch2-build/generated-includes/catch2/catch_user_config.hpp:
 
 /usr/include/bits/types/time_t.h:
@@ -531,6 +522,8 @@ _deps/catch2-src/src/catch2/internal/catch_wildcard_pattern.hpp:
 
 /usr/include/c++/15.2.1/bits/version.h:
 
+/usr/include/c++/15.2.1/bits/ostream.h:
+
 /usr/include/c++/15.2.1/debug/debug.h:
 
 /usr/include/c++/15.2.1/bits/align.h:
@@ -538,6 +531,10 @@ _deps/catch2-src/src/catch2/internal/catch_wildcard_pattern.hpp:
 /usr/include/c++/15.2.1/bits/functexcept.h:
 
 /usr/include/c++/15.2.1/streambuf:
+
+/usr/include/c++/15.2.1/bits/stl_tempbuf.h:
+
+/usr/include/stdc-predef.h:
 
 _deps/catch2-src/src/catch2/internal/catch_commandline.hpp:
 
@@ -585,7 +582,17 @@ _deps/catch2-src/src/catch2/internal/catch_stringref.hpp:
 
 /usr/include/gnu/stubs.h:
 
+/usr/include/bits/pthreadtypes.h:
+
+/usr/include/c++/15.2.1/bits/stl_multimap.h:
+
+/usr/include/c++/15.2.1/bits/exception_ptr.h:
+
 /usr/include/bits/select.h:
+
+/usr/include/c++/15.2.1/vector:
+
+/usr/include/c++/15.2.1/bits/exception_defines.h:
 
 /usr/include/c++/15.2.1/bits/functional_hash.h:
 
@@ -699,6 +706,10 @@ _deps/catch2-src/src/catch2/internal/catch_compiler_capabilities.hpp:
 
 /usr/include/c++/15.2.1/bits/stl_tree.h:
 
+/usr/include/pthread.h:
+
+/usr/include/c++/15.2.1/bits/stl_uninitialized.h:
+
 /usr/include/asm-generic/errno.h:
 
 /usr/include/c++/15.2.1/bits/stl_vector.h:
@@ -718,8 +729,6 @@ _deps/catch2-src/src/catch2/internal/catch_compiler_capabilities.hpp:
 /usr/include/bits/typesizes.h:
 
 /usr/include/c++/15.2.1/bits/string_view.tcc:
-
-/usr/include/locale.h:
 
 /usr/include/c++/15.2.1/bits/unique_ptr.h:
 
@@ -822,7 +831,3 @@ _deps/catch2-src/CMake/CatchMiscFunctions.cmake:
 _deps/catch2-src/src/catch2/internal/catch_clara.hpp:
 
 /usr/include/linux/stddef.h:
-
-/usr/include/c++/15.2.1/bits/stl_uninitialized.h:
-
-/usr/include/pthread.h:

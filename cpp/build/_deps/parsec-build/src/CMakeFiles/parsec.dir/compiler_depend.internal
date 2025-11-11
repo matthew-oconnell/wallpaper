@@ -6,6 +6,10 @@
  /home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/src/src/main.cpp
  /usr/bin/cmake
 
+_deps/parsec-build/src/CMakeFiles/parsec.dir/parsec_autogen/mocs_compilation.cpp.o
+ /home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-build/src/parsec_autogen/mocs_compilation.cpp
+ /usr/include/stdc-predef.h
+
 _deps/parsec-build/src/CMakeFiles/parsec.dir/src/main.cpp.o
  /home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/src/src/main.cpp
  /home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/src/include/ps/dictionary.hpp
@@ -290,6 +294,7 @@ _deps/parsec-build/src/parsec
  /usr/lib/libc_nonshared.a
  /usr/lib/libm.so.6
  /usr/lib/libmvec.so.1
+ /home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-build/src/CMakeFiles/parsec.dir/parsec_autogen/mocs_compilation.cpp.o
  /home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-build/src/CMakeFiles/parsec.dir/src/main.cpp.o
  /home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-build/src/libparsec_lib.a
 

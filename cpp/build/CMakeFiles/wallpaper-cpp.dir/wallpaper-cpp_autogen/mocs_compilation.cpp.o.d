@@ -344,6 +344,12 @@ CMakeFiles/wallpaper-cpp.dir/wallpaper-cpp_autogen/mocs_compilation.cpp.o: \
  /usr/include/qt6/QtGui/qfontvariableaxis.h \
  /usr/include/qt6/QtWidgets/qsizepolicy.h \
  /usr/include/qt6/QtGui/qcursor.h /usr/include/qt6/QtGui/qbitmap.h \
+ /home/matthew/Projects/wallpaper/cpp/build/wallpaper-cpp_autogen/UVLADIE3JM/../../../src/wallpapersetter.h \
+ /usr/include/qt6/QtCore/QString /usr/include/qt6/QtCore/qstring.h \
+ /usr/include/qt6/QtCore/QStringList \
+ /usr/include/qt6/QtCore/qstringlist.h \
+ /home/matthew/Projects/wallpaper/cpp/build/wallpaper-cpp_autogen/UVLADIE3JM/../../../src/redditfetcher.h \
+ /home/matthew/Projects/wallpaper/cpp/build/wallpaper-cpp_autogen/UVLADIE3JM/../../../src/cachemanager.h \
  /usr/include/qt6/QtCore/qtmochelpers.h \
  /usr/include/qt6/QtCore/qtmocconstants.h \
  /usr/include/qt6/QtCore/q20algorithm.h \

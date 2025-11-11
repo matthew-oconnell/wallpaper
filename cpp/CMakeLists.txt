@@ -26,6 +26,8 @@ add_executable(wallpaper-cpp
   src/cachemanager.cpp
   src/redditfetcher.h
   src/redditfetcher.cpp
+  src/wallpapersetter.h
+  src/wallpapersetter.cpp
 )
 
 target_include_directories(wallpaper-cpp PRIVATE ${parsec_SOURCE_DIR}/include)

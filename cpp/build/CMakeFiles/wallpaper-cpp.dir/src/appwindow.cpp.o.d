@@ -343,6 +343,12 @@ CMakeFiles/wallpaper-cpp.dir/src/appwindow.cpp.o: \
  /usr/include/qt6/QtGui/qfontvariableaxis.h \
  /usr/include/qt6/QtWidgets/qsizepolicy.h \
  /usr/include/qt6/QtGui/qcursor.h /usr/include/qt6/QtGui/qbitmap.h \
+ /home/matthew/Projects/wallpaper/cpp/src/wallpapersetter.h \
+ /usr/include/qt6/QtCore/QString /usr/include/qt6/QtCore/qstring.h \
+ /usr/include/qt6/QtCore/QStringList \
+ /usr/include/qt6/QtCore/qstringlist.h \
+ /home/matthew/Projects/wallpaper/cpp/src/redditfetcher.h \
+ /home/matthew/Projects/wallpaper/cpp/src/cachemanager.h \
  /usr/include/qt6/QtWidgets/QApplication \
  /usr/include/qt6/QtWidgets/qapplication.h \
  /usr/include/qt6/QtCore/qcoreapplication.h \
@@ -375,6 +381,8 @@ CMakeFiles/wallpaper-cpp.dir/src/appwindow.cpp.o: \
  /usr/include/qt6/QtWidgets/qframe.h /usr/include/qt6/QtGui/qpicture.h \
  /usr/include/qt6/QtCore/qiodevice.h \
  /usr/include/qt6/QtGui/qtextdocument.h /usr/include/qt6/QtCore/qurl.h \
- /home/matthew/Projects/wallpaper/cpp/src/redditfetcher.h \
- /usr/include/qt6/QtCore/QString /usr/include/qt6/QtCore/qstring.h \
- /home/matthew/Projects/wallpaper/cpp/src/cachemanager.h
+ /usr/include/qt6/QtCore/QRandomGenerator \
+ /usr/include/qt6/QtCore/qrandom.h /usr/include/c++/15.2.1/random \
+ /usr/include/c++/15.2.1/bits/random.h \
+ /usr/include/c++/15.2.1/x86_64-pc-linux-gnu/bits/opt_random.h \
+ /usr/include/c++/15.2.1/bits/random.tcc
