@@ -24,6 +24,7 @@
 #include <QThread>
 #include <QStandardPaths>
 #include <QDir>
+#include <QSaveFile>
 #include <functional>
 #include <QCheckBox>
 #include <QGuiApplication>
@@ -337,12 +338,10 @@ static QJsonObject readIndex(const QString &indexPath) {
 }
 
 static bool writeIndex(const QString &indexPath, const QJsonObject &rootObj) {
-    QJsonDocument doc(rootObj);
-    QFile f(indexPath);
-    if (!f.open(QIODevice::WriteOnly)) return false;
-    f.write(doc.toJson(QJsonDocument::Indented));
-    f.close();
-    return true;
+    QSaveFile sf(indexPath);
+    if (!sf.open(QIODevice::WriteOnly)) return false;
+    sf.write(QJsonDocument(rootObj).toJson(QJsonDocument::Indented));
+    return sf.commit();
 }
 
 void AppWindow::onThumbUp() {

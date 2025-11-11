@@ -15,6 +15,11 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QDateTime>
+#include <QSaveFile>
+#include <QRunnable>
+#include <QThreadPool>
+#include <QMutex>
+#include <QFileInfo>
 
 QString CacheManager::downloadAndCache(const QString &url) {
     // Use the same cache directory as the Python app (~/.cache/wallpaper)
@@ -65,50 +70,60 @@ QString CacheManager::downloadAndCache(const QString &url) {
     QString outPath = dir.filePath(outName);
     if (QFile::exists(outPath)) {
         qDebug() << "File already exists (by hash):" << outPath;
-        // ensure index.json contains size/thumbnail for this file (cheap idempotent update)
-        QString indexPath = dir.filePath("index.json");
-        QJsonObject rootObj;
-        QFile idxf(indexPath);
-        if (idxf.open(QIODevice::ReadOnly)) {
-            QJsonDocument doc = QJsonDocument::fromJson(idxf.readAll());
-            if (doc.isObject()) rootObj = doc.object();
-            idxf.close();
-        }
-        QJsonObject entry = rootObj.value(outName).toObject();
-        bool needWrite = false;
-        QSize sz;
-        QImageReader rExist(outPath);
-        sz = rExist.size();
-        if (sz.isEmpty()) {
-            QImage imgExist(outPath);
-            if (!imgExist.isNull()) sz = imgExist.size();
-        }
-        if (!sz.isEmpty() && (!entry.contains("width") || !entry.contains("height"))) {
-            entry["width"] = sz.width();
-            entry["height"] = sz.height();
-            needWrite = true;
-        }
-        if (!entry.contains("thumbnail")) {
-            QString thumbName = QString::fromUtf8(hash) + "-thumb.jpg";
-            QString thumbPath = dir.filePath(thumbName);
-            if (!QFile::exists(thumbPath)) {
-                QImage img2(outPath);
-                if (!img2.isNull()) {
-                    QImage thumb = img2.scaled(300,300, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-                    thumb.save(thumbPath, "JPEG", 85);
-                    qDebug() << "Wrote thumbnail for existing file:" << thumbPath;
+        // schedule an async task to ensure index.json contains size/thumbnail for this file
+        class EnsureIndexTask : public QRunnable {
+        public:
+            EnsureIndexTask(const QString &outPath_, const QString &outName_, const QByteArray &hash_, const QString &dirPath_)
+                : outPath(outPath_), outName(outName_), hash(hash_), dirPath(dirPath_) {}
+            void run() override {
+                QImageReader rExist(outPath);
+                QSize sz = rExist.size();
+                if (sz.isEmpty()) {
+                    QImage imgExist(outPath);
+                    if (!imgExist.isNull()) sz = imgExist.size();
+                }
+                QString indexPath = QDir(dirPath).filePath("index.json");
+                QJsonObject rootObj;
+                QFile idxf(indexPath);
+                if (idxf.open(QIODevice::ReadOnly)) {
+                    QJsonDocument doc = QJsonDocument::fromJson(idxf.readAll());
+                    if (doc.isObject()) rootObj = doc.object();
+                    idxf.close();
+                }
+                QJsonObject entry = rootObj.value(outName).toObject();
+                bool changed = false;
+                if (!sz.isEmpty() && (!entry.contains("width") || !entry.contains("height"))) {
+                    entry["width"] = sz.width();
+                    entry["height"] = sz.height();
+                    changed = true;
+                }
+                QString thumbName = QString::fromUtf8(hash) + "-thumb.jpg";
+                QString thumbPath = QDir(dirPath).filePath(thumbName);
+                if (!entry.contains("thumbnail") || !QFile::exists(thumbPath)) {
+                    QImage img2(outPath);
+                    if (!img2.isNull()) {
+                        QImage thumb = img2.scaled(300,300, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                        thumb.save(thumbPath, "JPEG", 85);
+                    }
+                    entry["thumbnail"] = thumbName;
+                    changed = true;
+                }
+                if (changed) {
+                    rootObj[outName] = entry;
+                    QSaveFile sf(indexPath);
+                    if (sf.open(QIODevice::WriteOnly)) {
+                        sf.write(QJsonDocument(rootObj).toJson(QJsonDocument::Indented));
+                        sf.commit();
+                    }
                 }
             }
-            entry["thumbnail"] = thumbName;
-            needWrite = true;
-        }
-        if (needWrite) {
-            rootObj[outName] = entry;
-            if (idxf.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-                idxf.write(QJsonDocument(rootObj).toJson(QJsonDocument::Indented));
-                idxf.close();
-            }
-        }
+        private:
+            QString outPath;
+            QString outName;
+            QByteArray hash;
+            QString dirPath;
+        };
+    QThreadPool::globalInstance()->start(new EnsureIndexTask(outPath, outName, hash, dir.absolutePath()));
         return outPath;
     }
     QFile f(outPath);
@@ -120,67 +135,64 @@ QString CacheManager::downloadAndCache(const QString &url) {
     f.close();
     qDebug() << "Saved to:" << outPath;
 
-    // After saving, compute image dimensions (try header first) and generate a small thumbnail.
-    QSize sz;
-    QImageReader r(outPath);
-    sz = r.size();
-    QImage img;
-    bool haveImage = false;
-    if (sz.isEmpty()) {
-        // fall back to full load
-        img = QImage(outPath);
-        if (!img.isNull()) {
-            sz = img.size();
-            haveImage = true;
+    // After saving, schedule thumbnail generation and index.json updates on a background thread
+    QString outNameCopy2 = outName;
+    QByteArray hashCopy2 = hash;
+    QString outPathCopy = outPath;
+    QString dirPath2 = dir.absolutePath();
+    class GenerateThumbTask : public QRunnable {
+    public:
+        GenerateThumbTask(const QString &outPath_, const QString &outName_, const QByteArray &hash_, const QString &dirPath_)
+            : outPath(outPath_), outName(outName_), hash(hash_), dirPath(dirPath_) {}
+        void run() override {
+            QSize sz;
+            QImageReader r(outPath);
+            sz = r.size();
+            QImage img;
+            if (sz.isEmpty()) {
+                img = QImage(outPath);
+                if (!img.isNull()) sz = img.size();
+            }
+            QString thumbName;
+            if (!img.isNull()) {
+                thumbName = QString::fromUtf8(hash) + "-thumb.jpg";
+                QString thumbPath = QDir(dirPath).filePath(thumbName);
+                QImage thumb = img.scaled(300, 300, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                thumb.save(thumbPath, "JPEG", 85);
+            }
+            QString indexPath = QDir(dirPath).filePath("index.json");
+            QJsonObject rootObj;
+            QFile idxf(indexPath);
+            if (idxf.open(QIODevice::ReadOnly)) {
+                QJsonDocument doc = QJsonDocument::fromJson(idxf.readAll());
+                if (doc.isObject()) rootObj = doc.object();
+                idxf.close();
+            }
+            QJsonObject entry = rootObj.value(outName).toObject();
+            if (!sz.isEmpty()) {
+                entry["width"] = sz.width();
+                entry["height"] = sz.height();
+            }
+            if (!thumbName.isEmpty()) entry["thumbnail"] = thumbName;
+            entry["downloaded_at"] = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+            if (!entry.contains("score")) entry["score"] = 0;
+            if (!entry.contains("banned")) entry["banned"] = false;
+            rootObj[outName] = entry;
+            QSaveFile sf(indexPath);
+            if (sf.open(QIODevice::WriteOnly)) {
+                sf.write(QJsonDocument(rootObj).toJson(QJsonDocument::Indented));
+                sf.commit();
+            } else {
+                qWarning() << "Failed to write index.json" << indexPath;
+            }
         }
-    }
-    // if QImageReader provided size, we may still need the full image to make a thumbnail
-    if (!haveImage) {
-        // attempt to read full image for creating thumbnail
-        img = QImage(outPath);
-        if (!img.isNull()) haveImage = true;
-    }
-
-    // create a thumbnail if we have an image
-    QString thumbName;
-    if (haveImage) {
-        // thumbnail filename based on hash
-        thumbName = QString::fromUtf8(hash) + "-thumb.jpg";
-        QString thumbPath = dir.filePath(thumbName);
-        // scale to a reasonable thumbnail size (max 300 px)
-        QImage thumb = img.scaled(300, 300, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-        // save as jpeg
-        thumb.save(thumbPath, "JPEG", 85);
-        qDebug() << "Wrote thumbnail:" << thumbPath;
-    }
-
-    // update index.json with width/height and thumbnail path
-    QString indexPath = dir.filePath("index.json");
-    QJsonObject rootObj;
-    QFile idxf(indexPath);
-    if (idxf.open(QIODevice::ReadOnly)) {
-        QJsonDocument doc = QJsonDocument::fromJson(idxf.readAll());
-        if (doc.isObject()) rootObj = doc.object();
-        idxf.close();
-    }
-    QJsonObject entry = rootObj.value(outName).toObject();
-    if (!sz.isEmpty()) {
-        entry["width"] = sz.width();
-        entry["height"] = sz.height();
-    }
-    if (!thumbName.isEmpty()) entry["thumbnail"] = thumbName;
-    // record downloaded time
-    entry["downloaded_at"] = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
-    if (!entry.contains("score")) entry["score"] = 0;
-    if (!entry.contains("banned")) entry["banned"] = false;
-    rootObj[outName] = entry;
-    QJsonDocument outDoc(rootObj);
-    if (idxf.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-        idxf.write(outDoc.toJson(QJsonDocument::Indented));
-        idxf.close();
-    } else {
-        qWarning() << "Failed to write index.json" << indexPath;
-    }
+    private:
+        QString outPath;
+        QString outName;
+        QByteArray hash;
+        QString dirPath;
+    };
+    QThreadPool::globalInstance()->start(new GenerateThumbTask(outPathCopy, outNameCopy2, hashCopy2, dirPath2));
     return outPath;
 }
 
