@@ -276,10 +276,8 @@ AppWindow::AppWindow(QWidget *parent)
     QWidget *detailWidget = new QWidget(this);
     qDebug() << "AppWindow ctor: created Details widget";
     QVBoxLayout *detailLayout = new QVBoxLayout(detailWidget);
-    detailPath_ = new QLabel("Path: ", detailWidget);
     detailSubreddit_ = new QLabel("Subreddit: unknown", detailWidget);
     detailResolution_ = new QLabel("Resolution: ", detailWidget);
-    detailLayout->addWidget(detailPath_);
     detailLayout->addWidget(detailSubreddit_);
     detailLayout->addWidget(detailResolution_);
 
