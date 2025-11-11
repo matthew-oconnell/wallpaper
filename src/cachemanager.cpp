@@ -175,7 +175,7 @@ QString CacheManager::downloadAndCache(const QString &url) {
             }
             if (!thumbName.isEmpty()) entry["thumbnail"] = thumbName;
             entry["downloaded_at"] = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
-            if (!entry.contains("score")) entry["score"] = 0;
+            if (!entry.contains("favorite")) entry["favorite"] = false;
             if (!entry.contains("banned")) entry["banned"] = false;
             rootObj[outName] = entry;
             QSaveFile sf(indexPath);

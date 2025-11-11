@@ -25,15 +25,15 @@ private slots:
     void onNewRandom();
     void onTrayActivated(QSystemTrayIcon::ActivationReason reason);
     void onThumbnailSelected(const QString &imagePath);
-    void onThumbUp();
-    void onThumbDown();
+    void onToggleFavorite();
+    void onRandomFavorite();
     void onPermaban();
     void onUpdateCache();
 
 private:
     QSystemTrayIcon *trayIcon_ = nullptr;
-    QAction *trayActThumbUp_ = nullptr;
-    QAction *trayActThumbDown_ = nullptr;
+    QAction *trayActFavorite_ = nullptr;
+    QAction *trayActRandomFavorite_ = nullptr;
     QAction *trayActPermaban_ = nullptr;
     WallpaperSetter wallpaperSetter_;
     RedditFetcher m_fetcher;
@@ -49,10 +49,9 @@ private:
     QLabel *detailPath_ = nullptr;
     QLabel *detailSubreddit_ = nullptr;
     QLabel *detailResolution_ = nullptr;
-    QLabel *detailScore_ = nullptr;
+    // score removed; use favorite flag instead
     QLabel *detailBanned_ = nullptr;
-    QPushButton *btnThumbUp_ = nullptr;
-    QPushButton *btnThumbDown_ = nullptr;
+    QPushButton *favoriteButton_ = nullptr;
     QPushButton *btnPermaban_ = nullptr;
     bool m_initialLoadDone = false;
 protected:

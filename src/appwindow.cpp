@@ -109,6 +109,11 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     l->addWidget(btnUpdate);
     btnUpdate_ = btnUpdate;
 
+    // Add a button to show a random favorited wallpaper
+    QPushButton *btnRandFav = new QPushButton("❤️ Random Favorite", this);
+    connect(btnRandFav, &QPushButton::clicked, this, &AppWindow::onRandomFavorite);
+    l->addWidget(btnRandFav);
+
     qDebug() << "AppWindow ctor: before SourcesPanel";
     // Sources panel (manage subreddits)
     sourcesPanel_ = new SourcesPanel(this);
@@ -220,12 +225,11 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
         qDebug() << "Thumbnail activated (double-click):" << imagePath;
         if (wallpaperSetter_.setWallpaper(imagePath)) {
             qDebug() << "Wallpaper set from thumbnail activation:" << imagePath;
-            // record currently-set wallpaper
-            currentWallpaperPath_ = imagePath;
-            // Update tray actions enabled state now that we have a current wallpaper
-            if (trayActThumbUp_) trayActThumbUp_->setEnabled(true);
-            if (trayActThumbDown_) trayActThumbDown_->setEnabled(true);
-            if (trayActPermaban_) trayActPermaban_->setEnabled(true);
+                // record currently-set wallpaper
+                currentWallpaperPath_ = imagePath;
+                // Update tray actions enabled state now that we have a current wallpaper
+                if (trayActFavorite_) trayActFavorite_->setEnabled(true);
+                if (trayActPermaban_) trayActPermaban_->setEnabled(true);
         } else {
             qWarning() << "Failed to set wallpaper for" << imagePath;
         }
@@ -239,26 +243,22 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     detailPath_ = new QLabel("Path: ", detailWidget);
     detailSubreddit_ = new QLabel("Subreddit: unknown", detailWidget);
     detailResolution_ = new QLabel("Resolution: ", detailWidget);
-    detailScore_ = new QLabel("Score: 0", detailWidget);
     detailBanned_ = new QLabel("Banned: false", detailWidget);
     detailLayout->addWidget(detailPath_);
     detailLayout->addWidget(detailSubreddit_);
     detailLayout->addWidget(detailResolution_);
-    detailLayout->addWidget(detailScore_);
     detailLayout->addWidget(detailBanned_);
 
     QHBoxLayout *actionsLayout = new QHBoxLayout();
-    btnThumbUp_ = new QPushButton("👍", detailWidget);
-    btnThumbDown_ = new QPushButton("👎", detailWidget);
+    favoriteButton_ = new QPushButton("♡ Favorite", detailWidget);
+    favoriteButton_->setCheckable(true);
     btnPermaban_ = new QPushButton("Perma-Ban", detailWidget);
-    actionsLayout->addWidget(btnThumbUp_);
-    actionsLayout->addWidget(btnThumbDown_);
+    actionsLayout->addWidget(favoriteButton_);
     actionsLayout->addWidget(btnPermaban_);
     detailLayout->addLayout(actionsLayout);
     l->addWidget(detailWidget);
 
-    connect(btnThumbUp_, &QPushButton::clicked, this, &AppWindow::onThumbUp);
-    connect(btnThumbDown_, &QPushButton::clicked, this, &AppWindow::onThumbDown);
+    connect(favoriteButton_, &QPushButton::clicked, this, &AppWindow::onToggleFavorite);
     connect(btnPermaban_, &QPushButton::clicked, this, &AppWindow::onPermaban);
     qDebug() << "AppWindow ctor: connected detail buttons";
 
@@ -281,17 +281,16 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     });
     menu->addAction(actOpen);
     // tray actions for quick votes/ban
-    QAction *actThumbUp = new QAction("👍 Current Wallpaper", this);
-    connect(actThumbUp, &QAction::triggered, this, &AppWindow::onThumbUp);
-    actThumbUp->setEnabled(false);
-    menu->addAction(actThumbUp);
-    trayActThumbUp_ = actThumbUp;
+    QAction *actFavorite = new QAction("❤️ Favorite Current", this);
+    connect(actFavorite, &QAction::triggered, this, &AppWindow::onToggleFavorite);
+    actFavorite->setEnabled(false);
+    menu->addAction(actFavorite);
+    trayActFavorite_ = actFavorite;
 
-    QAction *actThumbDown = new QAction("👎 Current Wallpaper", this);
-    connect(actThumbDown, &QAction::triggered, this, &AppWindow::onThumbDown);
-    actThumbDown->setEnabled(false);
-    menu->addAction(actThumbDown);
-    trayActThumbDown_ = actThumbDown;
+    QAction *actRandFav = new QAction("❤️ Random Favorite", this);
+    connect(actRandFav, &QAction::triggered, this, &AppWindow::onRandomFavorite);
+    menu->addAction(actRandFav);
+    trayActRandomFavorite_ = actRandFav;
 
     QAction *actPermaban = new QAction("💀 Perma-Ban Current Wallpaper", this);
     connect(actPermaban, &QAction::triggered, this, &AppWindow::onPermaban);
@@ -367,9 +366,8 @@ void AppWindow::onNewRandom() {
     double primaryAspect = double(scrSize.width()) / double(scrSize.height());
     thumbnailViewer_->setTargetAspectRatio(primaryAspect);
 
-    struct Candidate { QString path; double weight; };
+    struct Candidate { QString path; };
     QVector<Candidate> candidates;
-    double totalWeight = 0.0;
 
     QElapsedTimer timer; timer.start();
     int scanned = 0;
@@ -387,11 +385,8 @@ void AppWindow::onNewRandom() {
         if (!thumbnailViewer_->acceptsImage(path)) continue;
         considered++;
 
-        int score = entry.value("score").toInt(0);
-        // weight: base 1, plus positive score bonus (negative scores not helpful)
-        double weight = 1.0 + std::max(0, score);
-        candidates.append({ path, weight });
-        totalWeight += weight;
+        // uniform selection: just add candidate
+        candidates.append({ path });
     }
 
     if (candidates.empty()) {
@@ -399,15 +394,9 @@ void AppWindow::onNewRandom() {
         return;
     }
 
-    // weighted random selection
-    double r = QRandomGenerator::global()->generateDouble() * totalWeight;
-    QString chosen;
-    double acc = 0.0;
-    for (const Candidate &c : candidates) {
-        acc += c.weight;
-        if (r <= acc) { chosen = c.path; break; }
-    }
-    if (chosen.isEmpty()) chosen = candidates.last().path;
+    // uniform random selection
+    int idx = QRandomGenerator::global()->bounded(candidates.size());
+    QString chosen = candidates[idx].path;
 
     qDebug() << "Chosen wallpaper from cache:" << chosen;
     qDebug() << "onNewRandom: scanned=" << scanned << "considered=" << considered << "candidates=" << candidates.size() << "ms=" << timer.elapsed();
@@ -415,13 +404,63 @@ void AppWindow::onNewRandom() {
         qDebug() << "Wallpaper set successfully from cache";
         // update UI/details for the chosen image
         onThumbnailSelected(chosen);
-        // record currently-set wallpaper so tray actions operate on it
-        currentWallpaperPath_ = chosen;
-        if (trayActThumbUp_) trayActThumbUp_->setEnabled(true);
-        if (trayActThumbDown_) trayActThumbDown_->setEnabled(true);
-        if (trayActPermaban_) trayActPermaban_->setEnabled(true);
+    // record currently-set wallpaper so tray actions operate on it
+    currentWallpaperPath_ = chosen;
+    if (trayActFavorite_) trayActFavorite_->setEnabled(true);
+    if (trayActPermaban_) trayActPermaban_->setEnabled(true);
     } else {
         qWarning() << "Failed to set wallpaper from cache:" << chosen;
+    }
+}
+
+void AppWindow::onRandomFavorite() {
+    qDebug() << "Selecting a random favorited wallpaper from cache...";
+    QString cacheDir = m_cache.cacheDirPath();
+    QDir dir(cacheDir);
+    if (!dir.exists()) {
+        qWarning() << "Cache directory does not exist:" << cacheDir;
+        return;
+    }
+    QString indexPath = cacheDir + "/index.json";
+    QJsonObject index = readIndex(indexPath);
+
+    struct Candidate { QString path; };
+    QVector<Candidate> candidates;
+
+    QStringList nameFilters;
+    nameFilters << "*.png" << "*.jpg" << "*.jpeg" << "*.bmp" << "*.webp" << "*.gif";
+    QFileInfoList files = dir.entryInfoList(nameFilters, QDir::Files);
+
+    for (const QFileInfo &fi : files) {
+        QString path = fi.absoluteFilePath();
+        QString key = fi.fileName();
+        QJsonObject entry = index.value(key).toObject();
+        bool banned = entry.value("banned").toBool(false);
+        bool fav = entry.value("favorite").toBool(false);
+        if (banned || !fav) continue;
+        // respect filters
+        if (!thumbnailViewer_->acceptsImage(path)) continue;
+        candidates.append({ path });
+    }
+
+    if (candidates.empty()) {
+        qWarning() << "No favorited wallpapers found (after filters). Falling back to random.";
+        // fall back to plain random wallpaper
+        onNewRandom();
+        return;
+    }
+
+    int idx = QRandomGenerator::global()->bounded(candidates.size());
+    QString chosen = candidates[idx].path;
+    qDebug() << "Chosen favorite wallpaper:" << chosen;
+    if (wallpaperSetter_.setWallpaper(chosen)) {
+        qDebug() << "Wallpaper set successfully from favorite";
+        onThumbnailSelected(chosen);
+        currentWallpaperPath_ = chosen;
+        if (trayActFavorite_) trayActFavorite_->setEnabled(true);
+        if (trayActPermaban_) trayActPermaban_->setEnabled(true);
+    } else {
+        qWarning() << "Failed to set favorite wallpaper:" << chosen;
     }
 }
 
@@ -451,19 +490,21 @@ void AppWindow::onThumbnailSelected(const QString &imagePath) {
     QString key = QFileInfo(imagePath).fileName();
     QJsonObject entry = rootObj.value(key).toObject();
     QString subreddit = entry.value("subreddit").toString("unknown");
-    int score = entry.value("score").toInt(0);
     bool banned = entry.value("banned").toBool(false);
 
     detailSubreddit_->setText(QString("Subreddit: %1").arg(subreddit));
-    detailScore_->setText(QString("Score: %1").arg(score));
     detailBanned_->setText(QString("Banned: %1").arg(banned ? "true" : "false"));
     
     // Optionally set wallpaper on click? We'll not auto-set; keep manual behavior.
 
-    // Enable/disable tray actions based on whether we have a current wallpaper
+    // Favorite state for this thumbnail
+    bool fav = entry.value("favorite").toBool(false);
+    favoriteButton_->setChecked(fav);
+    favoriteButton_->setText(fav ? "♥ Favorited" : "♡ Favorite");
+
+    // Enable/disable tray favorite/permaban based on whether we have a current wallpaper
     bool hasCurrent = !currentWallpaperPath_.isEmpty();
-    if (trayActThumbUp_) trayActThumbUp_->setEnabled(hasCurrent);
-    if (trayActThumbDown_) trayActThumbDown_->setEnabled(hasCurrent);
+    if (trayActFavorite_) trayActFavorite_->setEnabled(hasCurrent);
     if (trayActPermaban_) trayActPermaban_->setEnabled(hasCurrent);
 }
 
@@ -485,46 +526,24 @@ static bool writeIndex(const QString &indexPath, const QJsonObject &rootObj) {
     return sf.commit();
 }
 
-void AppWindow::onThumbUp() {
-    // operate on the currently-set wallpaper
-    if (currentWallpaperPath_.isEmpty()) return;
-    QString key = QFileInfo(currentWallpaperPath_).fileName();
-    QString indexPath = m_cache.cacheDirPath() + "/index.json";
-    QJsonObject root = readIndex(indexPath);
+// removed old thumb-up/thumb-down handlers; favorites replace scoring
 
-    // config sources path
-    QString configDir = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/wallpaper";
-    QDir().mkpath(configDir);
-    QString sourcesPath = configDir + "/sources.json";
-
-    // (no-op here)
-    QJsonObject entry = root.value(key).toObject();
-    int score = entry.value("score").toInt(0);
-    score += 1;
-    entry["score"] = score;
-    root[key] = entry;
-    if (writeIndex(indexPath, root)) {
-        detailScore_->setText(QString("Score: %1").arg(score));
-        qDebug() << "Updated score to" << score << "for" << key;
-    } else {
-        qWarning() << "Failed to write index.json";
-    }
-}
-
-void AppWindow::onThumbDown() {
-    // operate on the currently-set wallpaper
-    if (currentWallpaperPath_.isEmpty()) return;
-    QString key = QFileInfo(currentWallpaperPath_).fileName();
+void AppWindow::onToggleFavorite() {
+    // toggle favorite for currently selected thumbnail if possible
+    QString targetPath = currentSelectedPath_.isEmpty() ? currentWallpaperPath_ : currentSelectedPath_;
+    if (targetPath.isEmpty()) return;
+    QString key = QFileInfo(targetPath).fileName();
     QString indexPath = m_cache.cacheDirPath() + "/index.json";
     QJsonObject root = readIndex(indexPath);
     QJsonObject entry = root.value(key).toObject();
-    int score = entry.value("score").toInt(0);
-    score -= 1;
-    entry["score"] = score;
+    bool fav = entry.value("favorite").toBool(false);
+    fav = !fav;
+    entry["favorite"] = fav;
     root[key] = entry;
     if (writeIndex(indexPath, root)) {
-        detailScore_->setText(QString("Score: %1").arg(score));
-        qDebug() << "Updated score to" << score << "for" << key;
+        favoriteButton_->setChecked(fav);
+        favoriteButton_->setText(fav ? "♥ Favorited" : "♡ Favorite");
+        qDebug() << "Set favorite=" << fav << "for" << key;
     } else {
         qWarning() << "Failed to write index.json";
     }
@@ -542,6 +561,8 @@ void AppWindow::onPermaban() {
     if (writeIndex(indexPath, root)) {
         detailBanned_->setText("Banned: true");
         qDebug() << "Set perma-ban for" << key;
+        // After permabanning the current wallpaper, immediately load a random favorited wallpaper
+        QTimer::singleShot(0, this, [this]() { this->onRandomFavorite(); });
     } else {
         qWarning() << "Failed to write index.json";
     }
@@ -582,16 +603,16 @@ void AppWindow::onUpdateCache() {
     QString sourcesPath = configDir + "/sources.json";
     // When worker reports an image cached, update index.json and thumbnail viewer on UI thread
     connect(worker, &UpdateWorker::imageCached, this, [this, indexPath, sourcesPath](const QString &cached, const QString &subreddit, const QString &sourceUrl){
-        // load index
-        QJsonObject root = readIndex(indexPath);
-        QString key = QFileInfo(cached).fileName();
-        QJsonObject entry = root.value(key).toObject();
-        entry["subreddit"] = subreddit;
-        entry["downloaded_at"] = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
-        if (!entry.contains("score")) entry["score"] = 0;
-        if (!entry.contains("banned")) entry["banned"] = false;
-        entry["source_url"] = sourceUrl;
-        root[key] = entry;
+    // load index
+    QJsonObject root = readIndex(indexPath);
+    QString key = QFileInfo(cached).fileName();
+    QJsonObject entry = root.value(key).toObject();
+    entry["subreddit"] = subreddit;
+    entry["downloaded_at"] = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+    if (!entry.contains("favorite")) entry["favorite"] = false;
+    if (!entry.contains("banned")) entry["banned"] = false;
+    entry["source_url"] = sourceUrl;
+    root[key] = entry;
         writeIndex(indexPath, root);
         // add thumbnail to viewer incrementally
         thumbnailViewer_->addThumbnailFromPath(cached);
