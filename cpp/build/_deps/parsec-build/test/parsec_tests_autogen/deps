@@ -1,0 +1,29 @@
+parsec_tests_autogen/timestamp: \
+	/home/matthew/Projects/wallpaper/cpp/build/_deps/catch2-src/extras/Catch.cmake \
+	/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/CMakeLists.txt \
+	/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/test_cli_parser_selection.cpp \
+	/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/test_comments.cpp \
+	/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/test_dictionary.cpp \
+	/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/test_initializer.cpp \
+	/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/test_parse_errors.cpp \
+	/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/test_parse_examples.cpp \
+	/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/test_parsec.cpp \
+	/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/test_pretty_print.cpp \
+	/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/test_ron.cpp \
+	/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/test_setdefaults.cpp \
+	/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/test_validate.cpp \
+	/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/test_validate_cfd.cpp \
+	/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/test_validate_medium_schema.cpp \
+	/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/test_validate_medium_schema_fail.cpp \
+	/usr/share/cmake/Modules/CTest.cmake \
+	/usr/share/cmake/Modules/CTestTargets.cmake \
+	/usr/share/cmake/Modules/CTestUseLaunchers.cmake \
+	/usr/share/cmake/Modules/DartConfiguration.tcl.in \
+	/usr/share/cmake/Modules/ExternalProject/shared_internal_commands.cmake \
+	/usr/share/cmake/Modules/FetchContent.cmake \
+	/usr/share/cmake/Modules/FetchContent/CMakeLists.cmake.in \
+	/usr/share/cmake/Modules/FindGit.cmake \
+	/usr/share/cmake/Modules/FindPackageHandleStandardArgs.cmake \
+	/usr/share/cmake/Modules/FindPackageMessage.cmake \
+	/usr/share/cmake/Templates/CTestScript.cmake.in \
+	/usr/bin/cmake

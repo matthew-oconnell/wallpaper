@@ -1,5 +1,6 @@
 #include "appwindow.h"
 
+#include <QApplication>
 #include <QIcon>
 #include <QMenu>
 #include <QSystemTrayIcon>
@@ -28,7 +29,7 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     connect(actNew, &QAction::triggered, this, &AppWindow::onNewRandom);
     menu->addAction(actNew);
     QAction *actQuit = new QAction("Quit", this);
-    connect(actQuit, &QAction::triggered, qApp, &QCoreApplication::quit);
+    connect(actQuit, &QAction::triggered, QApplication::instance(), &QApplication::quit);
     menu->addSeparator();
     menu->addAction(actQuit);
     trayIcon_->setContextMenu(menu);

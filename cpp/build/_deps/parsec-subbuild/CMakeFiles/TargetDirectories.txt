@@ -1,0 +1,3 @@
+/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-subbuild/CMakeFiles/parsec-populate.dir
+/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-subbuild/CMakeFiles/edit_cache.dir
+/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-subbuild/CMakeFiles/rebuild_cache.dir

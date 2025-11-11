@@ -1,0 +1,1 @@
+/usr/bin/c++ -g -Wl,--dependency-file=CMakeFiles/parsec.dir/link.d CMakeFiles/parsec.dir/parsec_autogen/mocs_compilation.cpp.o CMakeFiles/parsec.dir/src/main.cpp.o -o parsec  libparsec_lib.a

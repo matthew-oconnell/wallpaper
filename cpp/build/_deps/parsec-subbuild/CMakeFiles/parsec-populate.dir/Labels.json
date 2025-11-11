@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-subbuild/CMakeFiles/parsec-populate"
+		},
+		{
+			"file" : "/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-subbuild/CMakeFiles/parsec-populate.rule"
+		},
+		{
+			"file" : "/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-subbuild/CMakeFiles/parsec-populate-complete.rule"
+		},
+		{
+			"file" : "/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-subbuild/parsec-populate-prefix/src/parsec-populate-stamp/parsec-populate-build.rule"
+		},
+		{
+			"file" : "/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-subbuild/parsec-populate-prefix/src/parsec-populate-stamp/parsec-populate-configure.rule"
+		},
+		{
+			"file" : "/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-subbuild/parsec-populate-prefix/src/parsec-populate-stamp/parsec-populate-download.rule"
+		},
+		{
+			"file" : "/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-subbuild/parsec-populate-prefix/src/parsec-populate-stamp/parsec-populate-install.rule"
+		},
+		{
+			"file" : "/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-subbuild/parsec-populate-prefix/src/parsec-populate-stamp/parsec-populate-mkdir.rule"
+		},
+		{
+			"file" : "/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-subbuild/parsec-populate-prefix/src/parsec-populate-stamp/parsec-populate-patch.rule"
+		},
+		{
+			"file" : "/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-subbuild/parsec-populate-prefix/src/parsec-populate-stamp/parsec-populate-test.rule"
+		},
+		{
+			"file" : "/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-subbuild/parsec-populate-prefix/src/parsec-populate-stamp/parsec-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"parsec-populate"
+		],
+		"name" : "parsec-populate"
+	}
+}

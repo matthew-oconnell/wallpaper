@@ -3,6 +3,9 @@ project(wallpaper-cpp VERSION 0.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
 
 find_package(Qt6 COMPONENTS Widgets Network Core Gui REQUIRED)
 
@@ -30,29 +33,3 @@ target_include_directories(wallpaper-cpp PRIVATE ${parsec_SOURCE_DIR}/include)
 target_link_libraries(wallpaper-cpp PRIVATE Qt6::Widgets Qt6::Network Qt6::Core Qt6::Gui)
 
 install(TARGETS wallpaper-cpp RUNTIME DESTINATION bin)
-cmake_minimum_required(VERSION 3.16)
-project(wallpaper-qt LANGUAGES CXX)
-
-include(FetchContent)
-
-# Fetch parsec (user-specified JSON library). Repository: https://github.com/matthew-oconnell/parsec
-FetchContent_Declare(
-  parsec
-  GIT_REPOSITORY https://github.com/matthew-oconnell/parsec.git
-  GIT_TAG        HEAD
-)
-FetchContent_MakeAvailable(parsec)
-
-find_package(Qt6 COMPONENTS Widgets Network Core REQUIRED)
-
-add_executable(wallpaper-qt
-  src/main.cpp
-)
-
-target_include_directories(wallpaper-qt PRIVATE ${parsec_SOURCE_DIR}/include)
-# If parsec exports a CMake target, the following can be uncommented:
-# target_link_libraries(wallpaper-qt PRIVATE parsec)
-
-target_link_libraries(wallpaper-qt PRIVATE Qt6::Widgets Qt6::Network Qt6::Core)
-
-install(TARGETS wallpaper-qt RUNTIME DESTINATION bin)

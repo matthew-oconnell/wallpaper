@@ -1,0 +1,163 @@
+{
+	"BUILD_DIR" : "/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-build/test/parsec_tests_autogen",
+	"CMAKE_BINARY_DIR" : "/home/matthew/Projects/wallpaper/cpp/build",
+	"CMAKE_CURRENT_BINARY_DIR" : "/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-build/test",
+	"CMAKE_CURRENT_SOURCE_DIR" : "/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test",
+	"CMAKE_EXECUTABLE" : "/usr/bin/cmake",
+	"CMAKE_LIST_FILES" : 
+	[
+		"/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/CMakeLists.txt",
+		"/usr/share/cmake/Modules/FetchContent.cmake",
+		"/usr/share/cmake/Modules/ExternalProject/shared_internal_commands.cmake",
+		"/usr/share/cmake/Modules/FindGit.cmake",
+		"/usr/share/cmake/Modules/FindPackageHandleStandardArgs.cmake",
+		"/usr/share/cmake/Modules/FindPackageMessage.cmake",
+		"/usr/share/cmake/Modules/FetchContent/CMakeLists.cmake.in",
+		"/usr/share/cmake/Modules/CTest.cmake",
+		"/usr/share/cmake/Modules/CTestUseLaunchers.cmake",
+		"/usr/share/cmake/Modules/CTestTargets.cmake",
+		"/usr/share/cmake/Modules/DartConfiguration.tcl.in",
+		"/usr/share/cmake/Templates/CTestScript.cmake.in",
+		"/home/matthew/Projects/wallpaper/cpp/build/_deps/catch2-src/extras/Catch.cmake"
+	],
+	"CMAKE_SOURCE_DIR" : "/home/matthew/Projects/wallpaper/cpp",
+	"CROSS_CONFIG" : false,
+	"DEP_FILE" : "/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-build/test/parsec_tests_autogen/deps",
+	"DEP_FILE_RULE_NAME" : "parsec_tests_autogen/timestamp",
+	"HEADERS" : [],
+	"HEADER_EXTENSIONS" : [ "h", "hh", "h++", "hm", "hpp", "hxx", "in", "txx" ],
+	"INCLUDE_DIR" : "/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-build/test/parsec_tests_autogen/include",
+	"MOC_COMPILATION_FILE" : "/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-build/test/parsec_tests_autogen/mocs_compilation.cpp",
+	"MOC_DEFINITIONS" : [ "EXAMPLES_DIR=\"/home/matthew/Projects/wallpaper/cpp/examples\"" ],
+	"MOC_DEPEND_FILTERS" : 
+	[
+		[
+			"Q_PLUGIN_METADATA",
+			"[\n][ \t]*Q_PLUGIN_METADATA[ \t]*\\([^\\)]*FILE[ \t]*\"([^\"]+)\""
+		]
+	],
+	"MOC_INCLUDES" : 
+	[
+		"/home/matthew/Projects/wallpaper/cpp/src/include",
+		"/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/src/include",
+		"/home/matthew/Projects/wallpaper/cpp/build/_deps/catch2-src/src",
+		"/home/matthew/Projects/wallpaper/cpp/build/_deps/catch2-build/generated-includes",
+		"/usr/include/c++/15.2.1",
+		"/usr/include/c++/15.2.1/x86_64-pc-linux-gnu",
+		"/usr/include/c++/15.2.1/backward",
+		"/usr/lib/gcc/x86_64-pc-linux-gnu/15.2.1/include",
+		"/usr/local/include",
+		"/usr/lib/gcc/x86_64-pc-linux-gnu/15.2.1/include-fixed",
+		"/usr/include"
+	],
+	"MOC_MACRO_NAMES" : 
+	[
+		"Q_OBJECT",
+		"Q_GADGET",
+		"Q_NAMESPACE",
+		"Q_NAMESPACE_EXPORT",
+		"Q_GADGET_EXPORT",
+		"Q_ENUM_NS"
+	],
+	"MOC_OPTIONS" : [],
+	"MOC_PATH_PREFIX" : false,
+	"MOC_PREDEFS_CMD" : 
+	[
+		"/usr/bin/c++",
+		"-std=gnu++17",
+		"-w",
+		"-dM",
+		"-E",
+		"/usr/share/cmake/Modules/CMakeCXXCompilerABI.cpp"
+	],
+	"MOC_PREDEFS_FILE" : "/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-build/test/parsec_tests_autogen/moc_predefs.h",
+	"MOC_RELAXED_MODE" : false,
+	"MOC_SKIP" : [],
+	"MULTI_CONFIG" : false,
+	"PARALLEL" : 8,
+	"PARSE_CACHE_FILE" : "/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-build/test/CMakeFiles/parsec_tests_autogen.dir/ParseCache.txt",
+	"QT_MOC_EXECUTABLE" : "/usr/lib/qt6/moc",
+	"QT_UIC_EXECUTABLE" : "/usr/lib/qt6/uic",
+	"QT_VERSION_MAJOR" : 6,
+	"QT_VERSION_MINOR" : 10,
+	"SETTINGS_FILE" : "/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-build/test/CMakeFiles/parsec_tests_autogen.dir/AutogenUsed.txt",
+	"SOURCES" : 
+	[
+		[
+			"/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/test_cli_parser_selection.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/test_comments.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/test_dictionary.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/test_initializer.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/test_parse_errors.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/test_parse_examples.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/test_parsec.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/test_pretty_print.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/test_ron.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/test_setdefaults.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/test_validate.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/test_validate_cfd.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/test_validate_medium_schema.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/test/test_validate_medium_schema_fail.cpp",
+			"MU",
+			null
+		]
+	],
+	"UIC_OPTIONS" : [],
+	"UIC_SEARCH_PATHS" : [],
+	"UIC_SKIP" : [],
+	"UIC_UI_FILES" : [],
+	"USE_BETTER_GRAPH" : true,
+	"VERBOSITY" : 0
+}

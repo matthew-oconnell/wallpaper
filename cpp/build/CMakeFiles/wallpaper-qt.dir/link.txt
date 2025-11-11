@@ -1,0 +1,1 @@
+/usr/bin/c++ -g -Wl,--dependency-file=CMakeFiles/wallpaper-qt.dir/link.d "CMakeFiles/wallpaper-qt.dir/src/main.cpp.o" -o wallpaper-qt  /usr/lib/libQt6Widgets.so.6.10.0 /usr/lib/libQt6Network.so.6.10.0 /usr/lib/libQt6Gui.so.6.10.0 /usr/lib/libGLX.so /usr/lib/libOpenGL.so /usr/lib/libQt6Core.so.6.10.0

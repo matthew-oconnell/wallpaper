@@ -1,0 +1,12 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/matthew/Projects/wallpaper/cpp/build/cmake_install.cmake",
+		"/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-build/cmake_install.cmake",
+		"/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-build/src/cmake_install.cmake",
+		"/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-build/test/cmake_install.cmake",
+		"/home/matthew/Projects/wallpaper/cpp/build/_deps/catch2-build/cmake_install.cmake",
+		"/home/matthew/Projects/wallpaper/cpp/build/_deps/catch2-build/src/cmake_install.cmake"
+	],
+	"Parallel" : false
+}
