@@ -12,6 +12,8 @@
 #include <QPushButton>
 #include <QLabel>
 #include <QSpinBox>
+#include <QComboBox>
+#include <QTimer>
 #include <QRandomGenerator>
 #include "redditfetcher.h"
 #include "cachemanager.h"
@@ -263,7 +265,57 @@ AppWindow::AppWindow(QWidget *parent)
     connect(btnUpdate_, &QPushButton::clicked, this, &AppWindow::onUpdateCache);
     connect(btnCleanup_, &QPushButton::clicked, this, &AppWindow::startCleanup);
     // add the update/cleanup row into the left sidebar so controls are together
+    // first create the auto-random control: "Select a new random wallpaper every [spin] [unit]"
+    QHBoxLayout *autoRow = new QHBoxLayout();
+    autoRow->addWidget(new QLabel("Select a new random wallpaper every", this));
+    autoIntervalSpin_ = new QSpinBox(this);
+    autoIntervalSpin_->setRange(0, 1000000);
+    autoIntervalSpin_->setValue(0); // 0 means disabled unless unit is changed
+    autoIntervalSpin_->setToolTip("Interval value (0 to disable)");
+    autoRow->addWidget(autoIntervalSpin_);
+    autoIntervalUnit_ = new QComboBox(this);
+    autoIntervalUnit_->addItem("seconds");
+    autoIntervalUnit_->addItem("minutes");
+    autoIntervalUnit_->addItem("hours");
+    autoIntervalUnit_->addItem("on restart");
+    autoIntervalUnit_->setCurrentIndex(3); // default to "on restart" (disabled)
+    autoRow->addWidget(autoIntervalUnit_);
+    leftLayout->addLayout(autoRow);
+
     leftLayout->addLayout(updateRow);
+
+    // timer for automatic random wallpaper selection
+    autoTimer_ = new QTimer(this);
+    autoTimer_->setSingleShot(false);
+    connect(autoTimer_, &QTimer::timeout, this, &AppWindow::onNewRandom);
+
+    // helper to update timer whenever controls change
+    auto updateAutoTimer = [this]() {
+        if (!autoIntervalSpin_ || !autoIntervalUnit_) return;
+        int val = autoIntervalSpin_->value();
+        QString unit = autoIntervalUnit_->currentText();
+        if (unit == "on restart") {
+            if (autoTimer_->isActive()) autoTimer_->stop();
+            return;
+        }
+        if (val <= 0) {
+            if (autoTimer_->isActive()) autoTimer_->stop();
+            return;
+        }
+        qint64 msec = val;
+        if (unit == "seconds") msec = msec * 1000LL;
+        else if (unit == "minutes") msec = msec * 60LL * 1000LL;
+        else if (unit == "hours") msec = msec * 60LL * 60LL * 1000LL;
+        // clamp to int range for QTimer
+        if (msec > INT_MAX) msec = INT_MAX;
+        int imsec = static_cast<int>(msec);
+        if (autoTimer_->interval() != imsec || !autoTimer_->isActive()) {
+            autoTimer_->stop();
+            autoTimer_->start(imsec);
+        }
+    };
+    connect(autoIntervalSpin_, QOverload<int>::of(&QSpinBox::valueChanged), this, updateAutoTimer);
+    connect(autoIntervalUnit_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, updateAutoTimer);
     // initial load of thumbnails deferred until the window is shown to allow correct layout
     connect(thumbnailViewer_, &ThumbnailViewer::imageSelected, this, &AppWindow::onThumbnailSelected);
     // double-click (activate) should set the wallpaper immediately
@@ -299,8 +351,11 @@ AppWindow::AppWindow(QWidget *parent)
     QWidget *detailWidget = new QWidget(this);
     qDebug() << "AppWindow ctor: created Details widget";
     QVBoxLayout *detailLayout = new QVBoxLayout(detailWidget);
+    // path / subreddit / resolution details
+    detailPath_ = new QLabel("Path: ", detailWidget);
     detailSubreddit_ = new QLabel("Subreddit: unknown", detailWidget);
     detailResolution_ = new QLabel("Resolution: ", detailWidget);
+    detailLayout->addWidget(detailPath_);
     detailLayout->addWidget(detailSubreddit_);
     detailLayout->addWidget(detailResolution_);
 

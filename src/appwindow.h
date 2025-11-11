@@ -51,6 +51,10 @@ private:
     QPushButton *btnUpdate_ = nullptr;
     QPushButton *btnCleanup_ = nullptr;
     QSpinBox *updateCountSpin_ = nullptr;
+    // Auto-random wallpaper controls
+    QSpinBox *autoIntervalSpin_ = nullptr;
+    QComboBox *autoIntervalUnit_ = nullptr;
+    QTimer *autoTimer_ = nullptr;
     SourcesPanel *sourcesPanel_ = nullptr;
     FiltersPanel *filtersPanel_ = nullptr;
     // detail panel widgets
