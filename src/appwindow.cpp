@@ -138,15 +138,45 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     // Filters panel (All / Exact / Rough)
     filtersPanel_ = new FiltersPanel(this);
     l->addWidget(filtersPanel_);
+    // load persisted filter mode from config (if present)
+    QDir().mkpath(configDir);
+    QString configPath = configDir + "/config.json";
+    QJsonObject cfg;
+    QFile cfgf(configPath);
+    if (cfgf.open(QIODevice::ReadOnly)) {
+        QJsonDocument doc = QJsonDocument::fromJson(cfgf.readAll());
+        if (doc.isObject()) cfg = doc.object();
+        cfgf.close();
+    }
+    int savedMode = cfg.value("filter_mode").toInt((int)filtersPanel_->mode());
+    filtersPanel_->setMode(static_cast<ThumbnailViewer::AspectFilterMode>(savedMode));
+
     // compute primary screen aspect ratio and set it on the thumbnail viewer
     QScreen *screen = QGuiApplication::primaryScreen();
     QSize scrSize = screen ? screen->size() : QSize(1920,1080);
     double primaryAspect = double(scrSize.width()) / double(scrSize.height());
     thumbnailViewer_->setTargetAspectRatio(primaryAspect);
-    // apply initial mode and listen for changes
+    // apply initial mode
     thumbnailViewer_->setAspectFilterMode(filtersPanel_->mode());
-    connect(filtersPanel_, &FiltersPanel::modeChanged, this, [this](ThumbnailViewer::AspectFilterMode mode){
+    // listen for mode changes and persist the selection
+    connect(filtersPanel_, &FiltersPanel::modeChanged, this, [this, configPath](ThumbnailViewer::AspectFilterMode mode){
         thumbnailViewer_->setAspectFilterMode(mode);
+        // persist selection atomically
+        QJsonObject newCfg;
+        QFile rcf(configPath);
+        if (rcf.open(QIODevice::ReadOnly)) {
+            QJsonDocument doc = QJsonDocument::fromJson(rcf.readAll());
+            if (doc.isObject()) newCfg = doc.object();
+            rcf.close();
+        }
+        newCfg["filter_mode"] = (int)mode;
+        QSaveFile sf(configPath);
+        if (sf.open(QIODevice::WriteOnly)) {
+            sf.write(QJsonDocument(newCfg).toJson(QJsonDocument::Indented));
+            sf.commit();
+        } else {
+            qWarning() << "Failed to write config file:" << configPath;
+        }
         // reload thumbnails from cache so the filter takes effect immediately
         thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
     });

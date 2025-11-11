@@ -11,6 +11,7 @@ public:
     explicit FiltersPanel(QWidget *parent = nullptr);
 
     ThumbnailViewer::AspectFilterMode mode() const;
+    void setMode(ThumbnailViewer::AspectFilterMode m);
 
 signals:
     void modeChanged(ThumbnailViewer::AspectFilterMode newMode);

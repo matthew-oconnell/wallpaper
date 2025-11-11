@@ -24,3 +24,13 @@ ThumbnailViewer::AspectFilterMode FiltersPanel::mode() const {
     int v = combo_->currentData().toInt();
     return static_cast<ThumbnailViewer::AspectFilterMode>(v);
 }
+
+void FiltersPanel::setMode(ThumbnailViewer::AspectFilterMode m) {
+    // find the index with matching data and set it
+    for (int i = 0; i < combo_->count(); ++i) {
+        if (combo_->itemData(i).toInt() == static_cast<int>(m)) {
+            combo_->setCurrentIndex(i);
+            return;
+        }
+    }
+}
