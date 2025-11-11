@@ -262,6 +262,10 @@ AppWindow::AppWindow(QWidget *parent)
         }
     });
 
+    // connect context-menu actions from thumbnail viewer
+    connect(thumbnailViewer_, &ThumbnailViewer::favoriteRequested, this, &AppWindow::onThumbnailFavoriteRequested);
+    connect(thumbnailViewer_, &ThumbnailViewer::permabanRequested, this, &AppWindow::onThumbnailPermabanRequested);
+
     // Details panel
     qDebug() << "AppWindow ctor: before Details panel";
     QWidget *detailWidget = new QWidget(this);
@@ -276,18 +280,9 @@ AppWindow::AppWindow(QWidget *parent)
     detailLayout->addWidget(detailResolution_);
     detailLayout->addWidget(detailBanned_);
 
-    QHBoxLayout *actionsLayout = new QHBoxLayout();
-    favoriteButton_ = new QPushButton("♡ Favorite", detailWidget);
-    favoriteButton_->setCheckable(true);
-    btnPermaban_ = new QPushButton("Perma-Ban", detailWidget);
-    actionsLayout->addWidget(favoriteButton_);
-    actionsLayout->addWidget(btnPermaban_);
-    detailLayout->addLayout(actionsLayout);
+    // no inline favorite / permaban buttons in detail panel; actions are available from thumbnail context menu
     l->addWidget(detailWidget);
-
-    connect(favoriteButton_, &QPushButton::clicked, this, &AppWindow::onToggleFavorite);
-    connect(btnPermaban_, &QPushButton::clicked, this, &AppWindow::onPermaban);
-    qDebug() << "AppWindow ctor: connected detail buttons";
+    qDebug() << "AppWindow ctor: connected detail panel (no inline action buttons)";
 
     // tray
     // Use a dice emoji as the tray icon
@@ -537,10 +532,9 @@ void AppWindow::onThumbnailSelected(const QString &imagePath) {
     
     // Optionally set wallpaper on click? We'll not auto-set; keep manual behavior.
 
-    // Favorite state for this thumbnail
+    // Favorite state for this thumbnail (displayed via filters; no inline button)
     bool fav = entry.value("favorite").toBool(false);
-    favoriteButton_->setChecked(fav);
-    favoriteButton_->setText(fav ? "♥ Favorited" : "♡ Favorite");
+    Q_UNUSED(fav);
 
     // Enable/disable tray favorite/permaban based on whether we have a current wallpaper
     bool hasCurrent = !currentWallpaperPath_.isEmpty();
@@ -581,9 +575,52 @@ void AppWindow::onToggleFavorite() {
     entry["favorite"] = fav;
     root[key] = entry;
     if (writeIndex(indexPath, root)) {
-        favoriteButton_->setChecked(fav);
-        favoriteButton_->setText(fav ? "♥ Favorited" : "♡ Favorite");
+        // refresh thumbnails to reflect favorite state
+        if (thumbnailViewer_) thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
         qDebug() << "Set favorite=" << fav << "for" << key;
+    } else {
+        qWarning() << "Failed to write index.json";
+    }
+}
+
+void AppWindow::onThumbnailFavoriteRequested(const QString &imagePath)
+{
+    if (imagePath.isEmpty()) return;
+    QString key = QFileInfo(imagePath).fileName();
+    QString indexPath = m_cache.cacheDirPath() + "/index.json";
+    QJsonObject root = readIndex(indexPath);
+    QJsonObject entry = root.value(key).toObject();
+    bool fav = entry.value("favorite").toBool(false);
+    fav = !fav;
+    entry["favorite"] = fav;
+    root[key] = entry;
+    if (writeIndex(indexPath, root)) {
+        qDebug() << "Context-favorite set=" << fav << "for" << key;
+        if (thumbnailViewer_) thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
+    } else {
+        qWarning() << "Failed to write index.json";
+    }
+}
+
+void AppWindow::onThumbnailPermabanRequested(const QString &imagePath)
+{
+    if (imagePath.isEmpty()) return;
+    QString key = QFileInfo(imagePath).fileName();
+    QString indexPath = m_cache.cacheDirPath() + "/index.json";
+    QJsonObject root = readIndex(indexPath);
+    QJsonObject entry = root.value(key).toObject();
+    entry["banned"] = true;
+    root[key] = entry;
+    if (writeIndex(indexPath, root)) {
+        qDebug() << "Context-permaban set for" << key;
+        if (thumbnailViewer_) thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
+        if (currentSelectedPath_.isEmpty() == false && QFileInfo(currentSelectedPath_).fileName() == key) {
+            detailBanned_->setText("Banned: true");
+        }
+        // After permabanning, pick a new favorite wallpaper if the permabanned one is current
+        if (!currentWallpaperPath_.isEmpty() && QFileInfo(currentWallpaperPath_).fileName() == key) {
+            QTimer::singleShot(0, this, [this]() { this->onRandomFavorite(); });
+        }
     } else {
         qWarning() << "Failed to write index.json";
     }

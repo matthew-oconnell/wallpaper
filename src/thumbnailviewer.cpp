@@ -2,6 +2,8 @@
 #include <QDir>
 #include <QFileInfoList>
 #include <QLabel>
+#include <QMenu>
+#include <QAction>
 #include <QImageReader>
 #include <QPixmap>
 #include <QMouseEvent>
@@ -22,10 +24,12 @@ class ClickableLabel : public QLabel {
 public:
     explicit ClickableLabel(QWidget *parent = nullptr) : QLabel(parent) {
         setCursor(Qt::PointingHandCursor);
+        setContextMenuPolicy(Qt::DefaultContextMenu);
     }
 signals:
     void clicked();
     void doubleClicked();
+    void contextRequested(const QPoint &pos);
 protected:
     void mouseReleaseEvent(QMouseEvent *ev) override {
         if (ev->button() == Qt::LeftButton) emit clicked();
@@ -34,6 +38,10 @@ protected:
     void mouseDoubleClickEvent(QMouseEvent *ev) override {
         if (ev->button() == Qt::LeftButton) emit doubleClicked();
         QLabel::mouseDoubleClickEvent(ev);
+    }
+    void contextMenuEvent(QContextMenuEvent *ev) override {
+        emit contextRequested(ev->pos());
+        QLabel::contextMenuEvent(ev);
     }
 };
 
@@ -80,6 +88,16 @@ void ThumbnailViewer::addThumbnail(const QString &filePath, int row, int col)
     });
     connect(label, &ClickableLabel::doubleClicked, this, [this, filePath](){
         emit imageActivated(filePath);
+    });
+
+    // right-click context menu for per-thumbnail actions (favorite / perma-ban)
+    connect(label, &ClickableLabel::contextRequested, this, [this, label, filePath](const QPoint &pt){
+        QMenu menu(label);
+        QAction *actFav = menu.addAction(QString::fromUtf8("♥ Favorite"));
+        QAction *actBan = menu.addAction(QString::fromUtf8("💀 Perma-Ban"));
+        QAction *chosen = menu.exec(label->mapToGlobal(pt));
+        if (chosen == actFav) emit favoriteRequested(filePath);
+        else if (chosen == actBan) emit permabanRequested(filePath);
     });
 
     // store file path on the widget for dedupe checks

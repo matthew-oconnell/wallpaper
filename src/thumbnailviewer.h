@@ -38,6 +38,9 @@ signals:
     void imageSelected(const QString &imagePath);
     // Emitted when user double-clicks a thumbnail (activate)
     void imageActivated(const QString &imagePath);
+    // Context menu actions requested on a thumbnail
+    void favoriteRequested(const QString &imagePath);
+    void permabanRequested(const QString &imagePath);
 
 public slots:
     void refresh();

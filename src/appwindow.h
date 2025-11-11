@@ -27,8 +27,10 @@ private slots:
     void onTrayActivated(QSystemTrayIcon::ActivationReason reason);
     void onThumbnailSelected(const QString &imagePath);
     void onToggleFavorite();
+    void onThumbnailFavoriteRequested(const QString &imagePath);
     void onRandomFavorite();
     void onPermaban();
+    void onThumbnailPermabanRequested(const QString &imagePath);
     void onUpdateCache();
     void startCleanup();
     void cleanupFinished();
@@ -56,8 +58,6 @@ private:
     QLabel *detailResolution_ = nullptr;
     // score removed; use favorite flag instead
     QLabel *detailBanned_ = nullptr;
-    QPushButton *favoriteButton_ = nullptr;
-    QPushButton *btnPermaban_ = nullptr;
     bool m_initialLoadDone = false;
 protected:
     void showEvent(QShowEvent *event) override;
