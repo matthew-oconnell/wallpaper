@@ -23,6 +23,10 @@ public:
 
     // Load thumbnails from cache directory (e.g. ~/.cache/wallpaper)
     void loadFromCache(const QString &cacheDir);
+    // Return the unique resolutions present in the current index.json (width x height)
+    QList<QSize> availableResolutions() const;
+    // Set the list of resolutions that should be shown when in Exact (resolution) filter mode
+    void setSelectedResolutions(const QList<QSize> &resolutions);
     
     // Public relayout API so external callers can request a recompute of columns
     void relayoutGrid();
@@ -79,6 +83,7 @@ private:
     QJsonObject m_indexJson;
     QString m_indexPath;
     QStringList m_allowedSubreddits;
+    QList<QSize> m_selectedResolutions;
 protected:
     void resizeEvent(QResizeEvent *event) override;
 };

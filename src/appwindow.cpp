@@ -225,6 +225,7 @@ AppWindow::AppWindow(QWidget *parent)
         }
         // reload thumbnails from cache so the filter takes effect immediately
         thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
+        if (filtersPanel_) filtersPanel_->setAvailableResolutions(thumbnailViewer_->availableResolutions());
         if (sourcesPanel_) sourcesPanel_->updateCounts(m_cache.cacheDirPath());
     });
     connect(filtersPanel_, &FiltersPanel::favoritesOnlyChanged, this, [this, configPath](bool favOnly){
@@ -246,6 +247,7 @@ AppWindow::AppWindow(QWidget *parent)
             qWarning() << "Failed to write config file:" << configPath;
         }
         thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
+        if (filtersPanel_) filtersPanel_->setAvailableResolutions(thumbnailViewer_->availableResolutions());
         if (sourcesPanel_) sourcesPanel_->updateCounts(m_cache.cacheDirPath());
     });
     
@@ -284,6 +286,13 @@ AppWindow::AppWindow(QWidget *parent)
     // connect context-menu actions from thumbnail viewer
     connect(thumbnailViewer_, &ThumbnailViewer::favoriteRequested, this, &AppWindow::onThumbnailFavoriteRequested);
     connect(thumbnailViewer_, &ThumbnailViewer::permabanRequested, this, &AppWindow::onThumbnailPermabanRequested);
+
+    // Wire FiltersPanel resolution selection -> ThumbnailViewer selected resolutions
+    if (filtersPanel_) {
+        connect(filtersPanel_, &FiltersPanel::resolutionsChanged, this, [this](const QList<QSize> &sel){
+            if (thumbnailViewer_) thumbnailViewer_->setSelectedResolutions(sel);
+        });
+    }
 
     // Details panel
     qDebug() << "AppWindow ctor: before Details panel";
@@ -375,6 +384,9 @@ void AppWindow::showEvent(QShowEvent *event)
         // that the scroll viewport has a valid size and column calculation is correct.
         QTimer::singleShot(0, this, [this]() {
             thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
+            if (filtersPanel_) filtersPanel_->setAvailableResolutions(thumbnailViewer_->availableResolutions());
+            if (filtersPanel_) filtersPanel_->setAvailableResolutions(thumbnailViewer_->availableResolutions());
+            if (filtersPanel_) filtersPanel_->setAvailableResolutions(thumbnailViewer_->availableResolutions());
             if (sourcesPanel_) sourcesPanel_->updateCounts(m_cache.cacheDirPath());
             // schedule a follow-up relayout after layouts settle to avoid a 1-column flash
             QTimer::singleShot(80, thumbnailViewer_, [this]() {
@@ -739,6 +751,7 @@ void AppWindow::onUpdateCache() {
         }
         // refresh thumbnails and counts
         if (thumbnailViewer_) thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
+        if (filtersPanel_) filtersPanel_->setAvailableResolutions(thumbnailViewer_->availableResolutions());
         if (sourcesPanel_) sourcesPanel_->updateCounts(m_cache.cacheDirPath());
         // cleanup
         t->quit();
@@ -802,6 +815,7 @@ void AppWindow::onUpdateSubredditRequested(const QString &subreddit, int perSubL
     connect(worker, &UpdateWorker::finished, this, [this, t, worker]() {
         if (btnUpdate_) { btnUpdate_->setEnabled(true); btnUpdate_->setText("Update Library"); }
         if (thumbnailViewer_) thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
+        if (filtersPanel_) filtersPanel_->setAvailableResolutions(thumbnailViewer_->availableResolutions());
         if (sourcesPanel_) sourcesPanel_->updateCounts(m_cache.cacheDirPath());
         t->quit(); worker->deleteLater(); t->deleteLater();
     });

@@ -164,6 +164,9 @@ void ThumbnailViewer::loadFromCache(const QString &cacheDir)
         idxfile.close();
     }
 
+    // Reset selected resolutions when loading a new cache; caller (FiltersPanel) will be updated
+    m_selectedResolutions.clear();
+
     // Build the list of files to consider. Prefer entries from index.json for
     // fast metadata lookups (avoids opening/decoding many images). If index.json
     // is empty, fall back to scanning the directory.
@@ -266,6 +269,33 @@ void ThumbnailViewer::loadFromCache(const QString &cacheDir)
     // After populating, ensure the widgets are laid out according to current viewport width
     relayoutGrid();
     qDebug() << "ThumbnailViewer::loadFromCache: scanned=" << scanned << "accepted=" << accepted << "thumbs=" << m_labels.size() << "ms=" << timer.elapsed();
+}
+
+QList<QSize> ThumbnailViewer::availableResolutions() const
+{
+    QSet<QSize> set;
+    if (m_indexJson.isEmpty()) return {};
+    for (auto it = m_indexJson.constBegin(); it != m_indexJson.constEnd(); ++it) {
+        QJsonObject entry = it.value().toObject();
+        if (entry.contains("width") && entry.contains("height")) {
+            int w = entry.value("width").toInt(0);
+            int h = entry.value("height").toInt(0);
+            if (w > 0 && h > 0) set.insert(QSize(w,h));
+        }
+    }
+    QList<QSize> out = set.values();
+    std::sort(out.begin(), out.end(), [](const QSize &a, const QSize &b){
+        if (a.width() != b.width()) return a.width() < b.width();
+        return a.height() < b.height();
+    });
+    return out;
+}
+
+void ThumbnailViewer::setSelectedResolutions(const QList<QSize> &resolutions)
+{
+    m_selectedResolutions = resolutions;
+    // caller should call loadFromCache or refresh to apply filter; we'll call refresh()
+    refresh();
 }
 
 void ThumbnailViewer::refresh()
@@ -491,6 +521,14 @@ bool ThumbnailViewer::acceptsImage(const QString &filePath) const
     // (If we reached here we either have metadata or no allowlist; proceed to aspect checks.)
 
     if (m_filterMode == FilterExact) {
+        // If selected resolutions are specified, only accept images that match one of them
+        if (!m_selectedResolutions.isEmpty()) {
+            for (const QSize &s : m_selectedResolutions) {
+                if (s.width() == sz.width() && s.height() == sz.height()) return true;
+            }
+            return false;
+        }
+        // Fallback: previous behavior (aspect-based exact match) if no resolutions selected
         return qAbs(ar - m_targetAspect) <= 0.03;
     }
     // Rough: match orientation only (horizontal vs vertical)
