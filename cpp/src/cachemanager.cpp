@@ -8,14 +8,19 @@
 #include <QNetworkReply>
 #include <QEventLoop>
 #include <QCryptographicHash>
+#include <QDebug>
 
 QString CacheManager::downloadAndCache(const QString &url) {
-    // cache dir under XDG cache
-    QString cacheBase = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
-    if (cacheBase.isEmpty()) cacheBase = QDir::homePath() + "/.cache";
+    // Use the same cache directory as the Python app (~/.cache/wallpaper)
+    QString cacheBase = QDir::homePath() + "/.cache/wallpaper";
+    // ensure the directory exists (mkpath creates parent dirs as needed)
+    if (!QDir().mkpath(cacheBase)) {
+        qWarning() << "Failed to create cache directory:" << cacheBase;
+        // fall back to home cache directory
+        cacheBase = QDir::homePath() + "/.cache";
+        QDir().mkpath(cacheBase);
+    }
     QDir dir(cacheBase);
-    if (!dir.exists("wallpaper")) dir.mkdir("wallpaper");
-    dir.cd("wallpaper");
 
     // base filename from URL
     QString name = url.section('/', -1);
@@ -25,6 +30,7 @@ QString CacheManager::downloadAndCache(const QString &url) {
     if (QFile::exists(finalPath)) return finalPath;
 
     // download
+    qDebug() << "Downloading:" << url;
     QNetworkAccessManager mgr;
     QNetworkRequest req(url);
     req.setRawHeader("User-Agent", "wallpaper-cpp/0.1");
@@ -33,10 +39,13 @@ QString CacheManager::downloadAndCache(const QString &url) {
     QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
     loop.exec();
     if (reply->error() != QNetworkReply::NoError) {
+        qWarning() << "Network error:" << reply->error() << reply->errorString();
+        qWarning() << "URL was:" << url;
         reply->deleteLater();
         return QString();
     }
     QByteArray data = reply->readAll();
+    qDebug() << "Downloaded" << data.size() << "bytes";
     reply->deleteLater();
 
     // compute sha256 and avoid duplicates
@@ -45,10 +54,17 @@ QString CacheManager::downloadAndCache(const QString &url) {
     QString ext = name.section('.', -1);
     QString outName = QString::fromUtf8(hash) + "." + ext;
     QString outPath = dir.filePath(outName);
-    if (QFile::exists(outPath)) return outPath;
+    if (QFile::exists(outPath)) {
+        qDebug() << "File already exists (by hash):" << outPath;
+        return outPath;
+    }
     QFile f(outPath);
-    if (!f.open(QIODevice::WriteOnly)) return QString();
+    if (!f.open(QIODevice::WriteOnly)) {
+        qWarning() << "Failed to open file for writing:" << outPath;
+        return QString();
+    }
     f.write(data);
     f.close();
+    qDebug() << "Saved to:" << outPath;
     return outPath;
 }
