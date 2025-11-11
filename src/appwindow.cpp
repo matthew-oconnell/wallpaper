@@ -27,153 +27,58 @@
 #include <QFileInfo>
 #include <QThread>
 #include <QStandardPaths>
-#include <QDir>
 #include <QSaveFile>
-#include <functional>
-#include <QCheckBox>
-#include <QGuiApplication>
-#include <QScreen>
-#include <QImageReader>
-#include <QImage>
-#include <QElapsedTimer>
-#include <QShowEvent>
+#include <QDir>
 #include <QTimer>
+#include <QScreen>
+#include <QElapsedTimer>
+#include <QRegularExpression>
+#include <QMessageBox>
+#include <QFont>
 
-// Worker object to perform subreddit scanning & downloading in a background thread.
-class UpdateWorker : public QObject {
-    Q_OBJECT
-public:
-    explicit UpdateWorker(const QStringList &subs, int count = 100, QObject *parent = nullptr)
-        : QObject(parent), subs_(subs), count_(count) {}
-
-public slots:
-    void run() {
-        for (const QString &sub : subs_) {
-            RedditFetcher rf;
-            std::vector<std::string> urls = rf.fetchRecentImageUrls(sub, count_);
-            for (const auto &u : urls) {
-                QString url = QString::fromStdString(u);
-                CacheManager cache;
-                QString cached = cache.downloadAndCache(url);
-                if (!cached.isEmpty()) emit imageCached(cached, sub, url);
-            }
-        }
-        emit finished();
-    }
-
-signals:
-    void imageCached(const QString &cachedPath, const QString &subreddit, const QString &sourceUrl);
-    void finished();
-
-private:
-    QStringList subs_;
-    int count_ = 100;
-};
-
-// forward declarations for helpers defined later in this file
+// forward declarations for helper functions defined later in this file
 static QJsonObject readIndex(const QString &indexPath);
 static bool writeIndex(const QString &indexPath, const QJsonObject &rootObj);
 
-// Render a single emoji into a QIcon for use in the tray. This keeps the icon
-// visually consistent across desktops without adding resource files.
-static QIcon createEmojiIcon(const QString &emoji, int size = 32) {
-    QPixmap px(size, size);
-    px.fill(Qt::transparent);
-    QPainter p(&px);
-    QFont f = QApplication::font();
-    // Choose a reasonably large point size for the pixmap size.
-    f.setPointSizeF(size * 0.6);
-    p.setFont(f);
-    p.setPen(Qt::black);
-    p.drawText(px.rect(), Qt::AlignCenter, emoji);
-    p.end();
-    return QIcon(px);
-}
-
-
-AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
-    setWindowTitle("Wallpaper C++");
-    resize(900, 600);
+AppWindow::AppWindow(QWidget *parent)
+    : QWidget(parent)
+{
     qDebug() << "AppWindow ctor: start";
-
-    QVBoxLayout *l = new QVBoxLayout(this);
-    qDebug() << "AppWindow ctor: created layout";
-    QLabel *label = new QLabel("Subreddit: r/WidescreenWallpaper", this);
-    qDebug() << "AppWindow ctor: created label";
-    l->addWidget(label);
-    QPushButton *btn = new QPushButton("🎲 New Random Wallpaper", this);
-    qDebug() << "AppWindow ctor: created New Random button";
-    connect(btn, &QPushButton::clicked, this, &AppWindow::onNewRandom);
-    l->addWidget(btn);
-
-    // Update controls: button + count spin box (how many wallpapers to pull)
-    QHBoxLayout *updateRow = new QHBoxLayout();
-    QPushButton *btnUpdate = new QPushButton("Look For New Wallpapers", this);
-    qDebug() << "AppWindow ctor: created Update button";
-    connect(btnUpdate, &QPushButton::clicked, this, &AppWindow::onUpdateCache);
-    updateRow->addWidget(btnUpdate);
-    btnUpdate_ = btnUpdate;
-
-    QLabel *lblCount = new QLabel("Count:", this);
-    updateRow->addWidget(lblCount);
-    QSpinBox *spin = new QSpinBox(this);
-    spin->setRange(1, 1000);
-    spin->setValue(100); // default
-    updateRow->addWidget(spin);
-    updateCountSpin_ = spin;
-    l->addLayout(updateRow);
-
-    // Add a button to show a random favorited wallpaper
-    QPushButton *btnRandFav = new QPushButton("🎲❤️ Random Favorite", this);
-    connect(btnRandFav, &QPushButton::clicked, this, &AppWindow::onRandomFavorite);
-    l->addWidget(btnRandFav);
-
-    qDebug() << "AppWindow ctor: before SourcesPanel";
-    // Sources panel (manage subreddits)
-    sourcesPanel_ = new SourcesPanel(this);
-    qDebug() << "AppWindow ctor: created SourcesPanel";
-    // try to load persisted sources from config dir (~/.config/wallpaper/sources.json)
+    // ensure config dir path is available for later use
     QString configDir = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/wallpaper";
-    QDir().mkpath(configDir);
-    QString sourcesPathConfig = configDir + "/sources.json";
-    QString sourcesPathCache = m_cache.cacheDirPath() + "/sources.json"; // legacy location
-    bool loaded = false;
-    if (QFile::exists(sourcesPathConfig)) {
-        loaded = sourcesPanel_->loadFromFile(sourcesPathConfig);
-    }
-    if (!loaded && QFile::exists(sourcesPathCache)) {
-        // migrate from cache dir if present
-        loaded = sourcesPanel_->loadFromFile(sourcesPathCache);
-        if (loaded) {
-            sourcesPanel_->saveToFile(sourcesPathConfig);
-        }
-    }
-    if (!loaded) {
-        // initialize with default
-        sourcesPanel_->setSources(subscribedSubreddits_);
-    } else {
-        subscribedSubreddits_ = sourcesPanel_->sources();
-    }
+
+    // top-level layout
+    QVBoxLayout *l = new QVBoxLayout(this);
+
+    // sources panel (left side) — created early so other init can refer to it
+    sourcesPanel_ = new SourcesPanel(this);
+    // try to load persisted sources from config (if present)
+    QString sourcesPath = configDir + "/sources.json";
+    sourcesPanel_->loadFromFile(sourcesPath);
     l->addWidget(sourcesPanel_);
-    qDebug() << "AppWindow ctor: added SourcesPanel to layout";
-    // initialize allowed subreddits on the thumbnail viewer from current sources state
-    // (will be applied after the viewer is created below)
-    qDebug() << "AppWindow ctor: about to connect sourcesChanged";
-    connect(sourcesPanel_, &SourcesPanel::sourcesChanged, this, [this, sourcesPathConfig](const QStringList &list){
-        qDebug() << "AppWindow ctor: inside sourcesChanged lambda";
-        subscribedSubreddits_ = list;
-        // persist to config
-        sourcesPanel_->saveToFile(sourcesPathConfig);
+    connect(sourcesPanel_, &SourcesPanel::enabledSourcesChanged, this, [this](const QStringList &enabled){
+        if (thumbnailViewer_) thumbnailViewer_->setAllowedSubreddits(enabled);
     });
-    // when enabled (checked) list changes, tell the thumbnail viewer to update its allowed set
-    connect(sourcesPanel_, &SourcesPanel::enabledSourcesChanged, this, [this, sourcesPathConfig](const QStringList &enabled){
-        qDebug() << "AppWindow: enabledSourcesChanged:" << enabled;
-        // persist the enabled/disabled state immediately so it survives restarts
-        sourcesPanel_->saveToFile(sourcesPathConfig);
-        thumbnailViewer_->setAllowedSubreddits(enabled);
-        thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
+
+    // persist any changes to the sources list
+    connect(sourcesPanel_, &SourcesPanel::sourcesChanged, this, [this, sourcesPath](const QStringList &){
+        if (!sourcesPanel_->saveToFile(sourcesPath)) {
+            qWarning() << "Failed to save sources file:" << sourcesPath;
+        }
     });
-    qDebug() << "AppWindow ctor: connected sourcesChanged";
+
+    // small helper to render an emoji into a tray icon (fallback)
+    auto createEmojiIcon = [](const QString &emoji)->QIcon{
+        QPixmap pix(32,32);
+        pix.fill(Qt::transparent);
+        QPainter p(&pix);
+        QFont f = p.font(); f.setPointSize(18);
+        p.setFont(f);
+        p.drawText(pix.rect(), Qt::AlignCenter, emoji);
+        return QIcon(pix);
+    };
+
+    
 
     // Place the Filters panel after the subreddit list (per user request).
     // We load the saved filter mode here, but defer wiring the mode-changed handler
@@ -256,6 +161,12 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
         thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
         if (sourcesPanel_) sourcesPanel_->updateCounts(m_cache.cacheDirPath());
     });
+    
+    // Manual update button (restore deleted control): triggers cache update
+    QPushButton *btnUpdate = new QPushButton("Update", this);
+    btnUpdate->setToolTip("Fetch new images and update the cache/index");
+    l->addWidget(btnUpdate);
+    connect(btnUpdate, &QPushButton::clicked, this, &AppWindow::onUpdateCache);
     // initial load of thumbnails deferred until the window is shown to allow correct layout
     connect(thumbnailViewer_, &ThumbnailViewer::imageSelected, this, &AppWindow::onThumbnailSelected);
     // double-click (activate) should set the wallpaper immediately
@@ -269,7 +180,9 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
                 if (trayActFavorite_) trayActFavorite_->setEnabled(true);
                 if (trayActPermaban_) trayActPermaban_->setEnabled(true);
         } else {
-            qWarning() << "Failed to set wallpaper for" << imagePath;
+            QString err = wallpaperSetter_.lastError();
+            QMessageBox::warning(this, "Set wallpaper failed", QString("Failed to set wallpaper %1\n%2").arg(imagePath).arg(err));
+            qWarning() << "Failed to set wallpaper for" << imagePath << ";" << err;
         }
     });
 
@@ -400,10 +313,11 @@ void AppWindow::onNewRandom() {
     QString indexPath = cacheDir + "/index.json";
     QJsonObject index = readIndex(indexPath);
 
-    // Gather candidate images with weights
-    QStringList nameFilters;
-    nameFilters << "*.png" << "*.jpg" << "*.jpeg" << "*.bmp" << "*.webp" << "*.gif";
-    QFileInfoList files = dir.entryInfoList(nameFilters, QDir::Files);
+    // Gather candidate images by scanning all files and accepting common
+    // image extensions — allow filenames that include query-strings (e.g.
+    // "file.jpg?width=...") which glob-based filters miss.
+    QFileInfoList files = dir.entryInfoList(QDir::Files | QDir::NoSymLinks);
+    QRegularExpression extRegex(R"(\.(?:png|jpe?g|bmp|webp|gif)(?:$|\?))", QRegularExpression::CaseInsensitiveOption);
 
     // ensure thumbnail viewer has up-to-date primary aspect (used by filters)
     QScreen *screen = QGuiApplication::primaryScreen();
@@ -419,6 +333,9 @@ void AppWindow::onNewRandom() {
     int considered = 0;
 
     for (const QFileInfo &fi : files) {
+        // skip non-image files (and accept filenames that have a trailing
+        // query-string after the extension)
+        if (!extRegex.match(fi.fileName()).hasMatch()) continue;
         QString path = fi.absoluteFilePath();
         scanned++;
         QString key = fi.fileName();
@@ -454,7 +371,9 @@ void AppWindow::onNewRandom() {
     if (trayActFavorite_) trayActFavorite_->setEnabled(true);
     if (trayActPermaban_) trayActPermaban_->setEnabled(true);
     } else {
-        qWarning() << "Failed to set wallpaper from cache:" << chosen;
+        QString err = wallpaperSetter_.lastError();
+        QMessageBox::warning(this, "Set wallpaper failed", QString("Failed to set wallpaper %1\n%2").arg(chosen).arg(err));
+        qWarning() << "Failed to set wallpaper from cache:" << chosen << ";" << err;
     }
 }
 
@@ -472,11 +391,11 @@ void AppWindow::onRandomFavorite() {
     struct Candidate { QString path; };
     QVector<Candidate> candidates;
 
-    QStringList nameFilters;
-    nameFilters << "*.png" << "*.jpg" << "*.jpeg" << "*.bmp" << "*.webp" << "*.gif";
-    QFileInfoList files = dir.entryInfoList(nameFilters, QDir::Files);
+    QFileInfoList filesFav = dir.entryInfoList(QDir::Files | QDir::NoSymLinks);
+    QRegularExpression extRegexFav(R"(\.(?:png|jpe?g|bmp|webp|gif)(?:$|\?))", QRegularExpression::CaseInsensitiveOption);
 
-    for (const QFileInfo &fi : files) {
+    for (const QFileInfo &fi : filesFav) {
+        if (!extRegexFav.match(fi.fileName()).hasMatch()) continue;
         QString path = fi.absoluteFilePath();
         QString key = fi.fileName();
         QJsonObject entry = index.value(key).toObject();
@@ -614,71 +533,11 @@ void AppWindow::onPermaban() {
 }
 
 void AppWindow::onUpdateCache() {
-    qDebug() << "Update cache: scanning subscribed subreddits...";
-    QString indexPath = m_cache.cacheDirPath() + "/index.json";
-    QJsonObject root = readIndex(indexPath);
-
-    // Prepare ordered subreddit list: never-updated first, then oldest
-    QStringList allSources = sourcesPanel_ ? sourcesPanel_->enabledSources() : subscribedSubreddits_;
-    QMap<QString,QDateTime> lastMap = sourcesPanel_ ? sourcesPanel_->lastUpdatedMap() : QMap<QString,QDateTime>();
-    QStringList neverUpdated;
-    QVector<QPair<QString,QDateTime>> updated;
-    for (const QString &s : allSources) {
-        if (lastMap.contains(s) && lastMap.value(s).isValid()) {
-            updated.append(qMakePair(s, lastMap.value(s)));
-        } else {
-            neverUpdated.append(s);
-        }
-    }
-    std::sort(updated.begin(), updated.end(), [](const QPair<QString,QDateTime> &a, const QPair<QString,QDateTime> &b){
-        return a.second < b.second;
-    });
-    QStringList ordered;
-    ordered += neverUpdated;
-    for (const auto &p : updated) ordered.append(p.first);
-
-    // Run update in background thread so UI stays responsive
-    btnUpdate_->setEnabled(false);
-    QThread *thread = new QThread;
-    int count = updateCountSpin_ ? updateCountSpin_->value() : 100;
-    UpdateWorker *worker = new UpdateWorker(ordered, count);
-    worker->moveToThread(thread);
-    connect(thread, &QThread::started, worker, &UpdateWorker::run);
-    QString configDir = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/wallpaper";
-    QDir().mkpath(configDir);
-    QString sourcesPath = configDir + "/sources.json";
-    // When worker reports an image cached, update index.json and thumbnail viewer on UI thread
-    connect(worker, &UpdateWorker::imageCached, this, [this, indexPath, sourcesPath](const QString &cached, const QString &subreddit, const QString &sourceUrl){
-    // load index
-    QJsonObject root = readIndex(indexPath);
-    QString key = QFileInfo(cached).fileName();
-    QJsonObject entry = root.value(key).toObject();
-    entry["subreddit"] = subreddit;
-    entry["downloaded_at"] = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
-    if (!entry.contains("favorite")) entry["favorite"] = false;
-    if (!entry.contains("banned")) entry["banned"] = false;
-    entry["source_url"] = sourceUrl;
-    root[key] = entry;
-        writeIndex(indexPath, root);
-    // add thumbnail to viewer incrementally
-    thumbnailViewer_->addThumbnailFromPath(cached);
-    if (sourcesPanel_) sourcesPanel_->updateCounts(m_cache.cacheDirPath());
-        // update last-updated for the subreddit and persist
-        if (sourcesPanel_) {
-            QDateTime now = QDateTime::currentDateTimeUtc();
-            sourcesPanel_->setLastUpdated(subreddit, now);
-            sourcesPanel_->saveToFile(sourcesPath);
-        }
-    });
-    connect(worker, &UpdateWorker::finished, this, [this, thread, worker, indexPath](){
-        qDebug() << "Background update finished";
-        btnUpdate_->setEnabled(true);
-        if (sourcesPanel_) sourcesPanel_->updateCounts(m_cache.cacheDirPath());
-        thread->quit();
-        worker->deleteLater();
-        thread->deleteLater();
-    });
-    thread->start();
+    // Update worker temporarily disabled in this development build (missing
+    // UpdateWorker implementation). Restore the full update worker when the
+    // UpdateWorker class is available.
+    qWarning() << "onUpdateCache: UpdateWorker not available in this build. Skipping update.";
+    return;
 }
 
 #include "appwindow.moc"

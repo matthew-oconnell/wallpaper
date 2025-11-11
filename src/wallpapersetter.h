@@ -13,6 +13,9 @@ public:
     
     // Desktop environment detection
     QString detectDesktopEnvironment() const;
+
+    // Last error output (stderr/stdout/exit) from the most recent runCommand
+    QString lastError() const;
     
 private:
     // Backend implementations
@@ -23,6 +26,10 @@ private:
     
     // Helper to run shell commands
     bool runCommand(const QString& command, const QStringList& args = QStringList());
+
+    
+    // storage for last error
+    QString m_lastError;
 };
 
 #endif // WALLPAPERSETTER_H

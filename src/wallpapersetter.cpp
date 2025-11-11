@@ -3,9 +3,14 @@
 #include <QDebug>
 #include <QFileInfo>
 #include <QProcessEnvironment>
+#include <QString>
+#include <QUrl>
 
 WallpaperSetter::WallpaperSetter() {
 }
+
+// (m_lastError is an instance member declared in the header)
+
 
 QString WallpaperSetter::detectDesktopEnvironment() const {
     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
@@ -81,13 +86,14 @@ bool WallpaperSetter::setWallpaperGnome(const QString& imagePath) {
     qDebug() << "Using GNOME gsettings method";
     
     // Try both picture-uri and picture-uri-dark for better compatibility
-    bool result1 = runCommand("gsettings", QStringList() 
-        << "set" << "org.gnome.desktop.background" << "picture-uri" 
-        << QString("file://%1").arg(imagePath));
-    
-    bool result2 = runCommand("gsettings", QStringList() 
-        << "set" << "org.gnome.desktop.background" << "picture-uri-dark" 
-        << QString("file://%1").arg(imagePath));
+    QString uri = QUrl::fromLocalFile(imagePath).toString();
+    bool result1 = runCommand("gsettings", QStringList()
+        << "set" << "org.gnome.desktop.background" << "picture-uri"
+        << uri);
+
+    bool result2 = runCommand("gsettings", QStringList()
+        << "set" << "org.gnome.desktop.background" << "picture-uri-dark"
+        << uri);
     
     return result1 || result2;
 }
@@ -97,15 +103,16 @@ bool WallpaperSetter::setWallpaperKDE(const QString& imagePath) {
     
     // KDE Plasma uses D-Bus to set wallpaper
     // This JavaScript command sets wallpaper on all desktops
+    QString uri = QUrl::fromLocalFile(imagePath).toString();
     QString script = QString(
         "var allDesktops = desktops();"
         "for (i=0; i<allDesktops.length; i++) {"
         "    d = allDesktops[i];"
         "    d.wallpaperPlugin = 'org.kde.image';"
         "    d.currentConfigGroup = Array('Wallpaper', 'org.kde.image', 'General');"
-        "    d.writeConfig('Image', 'file://%1');"
+        "    d.writeConfig('Image', '%1');"
         "}"
-    ).arg(imagePath);
+    ).arg(uri);
     
     return runCommand("qdbus", QStringList() 
         << "org.kde.plasmashell" << "/PlasmaShell" 
@@ -147,23 +154,48 @@ bool WallpaperSetter::setWallpaperXwallpaper(const QString& imagePath) {
 bool WallpaperSetter::runCommand(const QString& command, const QStringList& args) {
     QProcess process;
     process.start(command, args);
-    
+
+    m_lastError.clear();
+
     if (!process.waitForStarted()) {
-        qWarning() << "Failed to start command:" << command;
+        m_lastError = QString("Failed to start command: %1").arg(command);
+        qWarning() << m_lastError;
         return false;
     }
-    
+
     if (!process.waitForFinished(5000)) { // 5 second timeout
-        qWarning() << "Command timed out:" << command;
+        m_lastError = QString("Command timed out: %1").arg(command);
+        qWarning() << m_lastError;
         process.kill();
         return false;
     }
-    
+
+    QByteArray stdoutData = process.readAllStandardOutput();
+    QByteArray stderrData = process.readAllStandardError();
+
     if (process.exitCode() != 0) {
-        qWarning() << "Command failed with exit code" << process.exitCode() << ":" << command;
-        qWarning() << "stderr:" << process.readAllStandardError();
+        m_lastError = QString("Command failed (exit %1): %2\nstdout:\n%3\nstderr:\n%4")
+            .arg(process.exitCode())
+            .arg(command)
+            .arg(QString::fromUtf8(stdoutData))
+            .arg(QString::fromUtf8(stderrData));
+        qWarning() << m_lastError;
         return false;
     }
-    
+
+    // store any non-empty stderr/stdout in lastError for diagnostics, but treat as success
+    if (!stderrData.isEmpty() || !stdoutData.isEmpty()) {
+        m_lastError = QString("Command succeeded: %1\nstdout:\n%2\nstderr:\n%3")
+            .arg(command)
+            .arg(QString::fromUtf8(stdoutData))
+            .arg(QString::fromUtf8(stderrData));
+    } else {
+        m_lastError.clear();
+    }
+
     return true;
+}
+
+QString WallpaperSetter::lastError() const {
+    return m_lastError;
 }
