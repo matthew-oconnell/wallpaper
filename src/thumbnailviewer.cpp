@@ -17,6 +17,9 @@
 #include <QThreadPool>
 #include <QRunnable>
 #include <QSaveFile>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
 
 // Simple clickable QLabel
 class ClickableLabel : public QLabel {

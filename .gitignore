@@ -1,1 +1,14 @@
+# Flatpak/build artifacts and generated bundles
+/flatpak/build/
+/flatpak/repo/
+/wallpaper.flatpak
+/.flatpak-builder/
+/.flatpak/
+/flatpak/export/
+
+# OS / editor temp files
+/.vscode/
+/.idea/
+*.swp
+*~
 build/

@@ -1,0 +1,45 @@
+name: Build Flatpak bundle
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: Build and bundle Flatpak
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder build-essential cmake pkg-config git
+
+      - name: Add Flathub remote
+        run: |
+          sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo || true
+
+      - name: Install KDE SDK and Platform
+        run: |
+          # Install the SDK and Platform needed by the manifest
+          sudo flatpak install -y --noninteractive flathub org.kde.Sdk//6.4 org.kde.Platform//6.4 || true
+
+      - name: Build Flatpak
+        run: |
+          mkdir -p flatpak/build flatpak/repo
+          flatpak-builder --force-clean --repo=flatpak/repo flatpak/build flatpak/manifest.json
+
+      - name: Create bundle
+        run: |
+          flatpak build-bundle flatpak/repo wallpaper.flatpak org.matthew.wallpaper || true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wallpaper.flatpak
+          path: wallpaper.flatpak
