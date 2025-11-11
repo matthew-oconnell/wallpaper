@@ -1,15 +1,17 @@
-# wallpaper
+C++ Qt scaffold for Wallpaper
 
-Small CLI tool to fetch the latest wallpaper from a subreddit and set it as the desktop wallpaper on Linux.
+This folder contains a minimal Qt6-based scaffold for a wallpaper application.
 
-This is an initial prototype. It:
-- fetches /r/WidescreenWallpaper/new.json
-- picks the first direct image URL (handles i.redd.it, i.imgur.com, reddit-hosted galleries)
-- downloads the image to a cache directory
-- sets wallpaper via gsettings (GNOME) or feh fallback
+Build (Linux example):
 
-Usage:
+  mkdir build && cd build
+  cmake ..
+  cmake --build .
 
-    python -m wallpaper.cli --subreddit WidescreenWallpaper --dry-run
+Run:
 
-See `src` for implementation and `tests` for unit tests.
+  ./wallpaper-qt
+
+Notes:
+- CMake fetches the `parsec` JSON library (from https://github.com/matthew-oconnell/parsec) but the current code uses Qt's QJsonDocument for parsing. I'll switch parsing to parsec once you confirm the parsec include and API.
+- The app currently only fetches the subreddit JSON and shows a tray notification with a candidate image URL. Download and wallpaper-setting are TODO and can be implemented next.

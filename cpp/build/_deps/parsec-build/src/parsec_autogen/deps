@@ -1,4 +1,0 @@
-parsec_autogen/timestamp: \
-	/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/src/CMakeLists.txt \
-	/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/src/src/main.cpp \
-	/usr/bin/cmake

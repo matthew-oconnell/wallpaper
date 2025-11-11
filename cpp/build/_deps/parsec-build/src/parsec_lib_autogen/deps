@@ -1,9 +1,0 @@
-parsec_lib_autogen/timestamp: \
-	/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/src/CMakeLists.txt \
-	/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/src/src/defaults.cpp \
-	/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/src/src/json_parser.cpp \
-	/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/src/src/parse.cpp \
-	/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/src/src/parsec.cpp \
-	/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/src/src/ron_parser.cpp \
-	/home/matthew/Projects/wallpaper/cpp/build/_deps/parsec-src/src/src/validate.cpp \
-	/usr/bin/cmake

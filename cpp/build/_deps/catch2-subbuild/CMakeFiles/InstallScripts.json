@@ -1,7 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"/home/matthew/Projects/wallpaper/cpp/build/_deps/catch2-subbuild/cmake_install.cmake"
-	],
-	"Parallel" : false
-}
