@@ -24,16 +24,13 @@ SourcesPanel::SourcesPanel(QWidget *parent)
     qDebug() << "SourcesPanel ctor: created QListWidget";
     m_edit = new QLineEdit(this);
     qDebug() << "SourcesPanel ctor: created QLineEdit";
-    m_edit->setPlaceholderText("subreddit (without r/) e.g. WidescreenWallpaper");
+    m_edit->setPlaceholderText("subreddit (no r/) e.g. WidescreenWallpaper");
     m_btnAdd = new QPushButton("Add", this);
     qDebug() << "SourcesPanel ctor: created Add button";
-    m_btnRemove = new QPushButton("Remove", this);
-    qDebug() << "SourcesPanel ctor: created Remove button";
 
     auto *h = new QHBoxLayout;
     h->addWidget(m_edit);
     h->addWidget(m_btnAdd);
-    h->addWidget(m_btnRemove);
 
     auto *v = new QVBoxLayout(this);
     v->addWidget(m_list);
@@ -58,25 +55,7 @@ SourcesPanel::SourcesPanel(QWidget *parent)
         emit enabledSourcesChanged(enabledSources());
     });
 
-    connect(m_btnRemove, &QPushButton::clicked, this, [this]() {
-        auto items = m_list->selectedItems();
-        for (QListWidgetItem *it : items) {
-            QString raw = it->data(Qt::UserRole).toString();
-            if (!raw.isEmpty()) {
-                // clean up maps/widgets
-                if (m_itemWidgets.contains(raw)) {
-                    delete m_itemWidgets.value(raw);
-                    m_itemWidgets.remove(raw);
-                }
-                m_itemLabels.remove(raw);
-                m_itemProgress.remove(raw);
-            }
-            delete it;
-        }
-        QStringList s = sources();
-        emit sourcesChanged(s);
-        emit enabledSourcesChanged(enabledSources());
-    });
+    // Note: the Remove action is available from the item's context menu. The explicit Remove button was removed.
 
     // react to manual check/uncheck changes
     connect(m_list, &QListWidget::itemChanged, this, [this](QListWidgetItem *it){

@@ -48,7 +48,6 @@ private:
     QListWidget *m_list = nullptr;
     QLineEdit *m_edit = nullptr;
     QPushButton *m_btnAdd = nullptr;
-    QPushButton *m_btnRemove = nullptr;
     QMap<QString, QDateTime> m_lastUpdated;
     // Per-item widgets
     QMap<QString, QWidget*> m_itemWidgets;

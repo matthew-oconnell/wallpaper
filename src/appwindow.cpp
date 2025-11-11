@@ -18,6 +18,7 @@
 #include "thumbnailviewer.h"
 #include "sourcespanel.h"
 #include "updateworker.h"
+#include <QFrame>
 #include <QLabel>
 #include <QPushButton>
 #include <QJsonDocument>
@@ -252,7 +253,7 @@ AppWindow::AppWindow(QWidget *parent)
     btnUpdate_ = new QPushButton("Update Library", this);
     btnUpdate_->setToolTip("Fetch new images and update the cache/index");
     btnCleanup_ = new QPushButton("Cleanup Library", this);
-    btnCleanup_->setToolTip("Remove cached images whose subreddit is no longer in the sources list");
+    btnCleanup_->setToolTip("Remove images leftover from deleted subreddits");
     // place buttons on one row (will be added to right panel)
     QHBoxLayout *updateRow = new QHBoxLayout();
     updateRow->addWidget(btnUpdate_);
@@ -297,6 +298,14 @@ AppWindow::AppWindow(QWidget *parent)
     // no inline favorite / permaban buttons in detail panel; actions are available from thumbnail context menu
     rightLayout->addWidget(detailWidget);
     qDebug() << "AppWindow ctor: connected detail panel (no inline action buttons)";
+
+    // insert a vertical divider between left and right panels for visual clarity
+    QFrame *divider = new QFrame(this);
+    divider->setFrameShape(QFrame::VLine);
+    divider->setFrameShadow(QFrame::Sunken);
+    divider->setLineWidth(1);
+    divider->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+    main->addWidget(divider);
 
     // finish assembling main layout: add rightPanel to the main HBox
     main->addWidget(rightPanel, 1);
