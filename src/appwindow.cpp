@@ -136,6 +136,9 @@ AppWindow::AppWindow(QWidget *parent)
         }
     });
 
+    // handle per-subreddit update requests from the sources panel context menu
+    connect(sourcesPanel_, &SourcesPanel::updateRequested, this, &AppWindow::onUpdateSubredditRequested);
+
     // small helper to render an emoji into a tray icon (fallback)
     auto createEmojiIcon = [](const QString &emoji)->QIcon{
         QPixmap pix(32,32);
@@ -701,6 +704,12 @@ void AppWindow::onUpdateCache() {
         }
     });
 
+    // update per-subreddit progress UI
+    if (sourcesPanel_) {
+        connect(worker, &UpdateWorker::started, sourcesPanel_, &SourcesPanel::startUpdateProgress);
+        connect(worker, &UpdateWorker::finishedSubreddit, sourcesPanel_, &SourcesPanel::finishUpdateProgress);
+    }
+
     connect(worker, &UpdateWorker::error, this, [this](const QString &msg){
         qWarning() << "UpdateWorker error:" << msg;
     });
@@ -721,6 +730,65 @@ void AppWindow::onUpdateCache() {
 
     connect(t, &QThread::started, worker, &UpdateWorker::start);
     // ensure thread stops if app exits
+    connect(qApp, &QCoreApplication::aboutToQuit, t, &QThread::quit);
+    t->start();
+}
+
+void AppWindow::onUpdateSubredditRequested(const QString &subreddit, int perSubLimit)
+{
+    if (subreddit.isEmpty()) return;
+    if (!btnUpdate_) return;
+    btnUpdate_->setEnabled(false);
+    btnUpdate_->setText(QString("Updating %1...").arg(subreddit));
+
+    QStringList subs; subs << subreddit;
+    UpdateWorker *worker = new UpdateWorker(&m_fetcher, &m_cache, subs, perSubLimit);
+    QThread *t = new QThread(this);
+    worker->moveToThread(t);
+
+    connect(worker, &UpdateWorker::imageCached, this, [this](const QString &localPath, const QString &sub, const QString &sourceUrl){
+        // same handling as in onUpdateCache
+        QString configDir = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/wallpaper";
+        QDir().mkpath(configDir);
+        QString urlMapPath = configDir + "/url_map.json";
+        QJsonObject urlmap;
+        QFile f(urlMapPath);
+        if (f.open(QIODevice::ReadOnly)) {
+            QJsonDocument doc = QJsonDocument::fromJson(f.readAll());
+            if (doc.isObject()) urlmap = doc.object();
+            f.close();
+        }
+        QUrl u(sourceUrl);
+        u.setQuery(QString()); u.setFragment(QString());
+        QString norm = u.toString();
+        QJsonArray arr = urlmap.value(norm).toArray();
+        bool found = false; for (const QJsonValue &v : arr) if (v.toString() == sub) { found = true; break; }
+        if (!found) arr.append(sub);
+        urlmap.insert(norm, arr);
+        QSaveFile sf(urlMapPath);
+        if (sf.open(QIODevice::WriteOnly)) { sf.write(QJsonDocument(urlmap).toJson(QJsonDocument::Indented)); sf.commit(); }
+
+        QString indexPath = m_cache.cacheDirPath() + "/index.json";
+        QJsonObject root = readIndex(indexPath);
+        QString key = QFileInfo(localPath).fileName();
+        QJsonObject entry = root.value(key).toObject();
+        if (entry.value("subreddit").toString().isEmpty()) { entry["subreddit"] = sub; root[key] = entry; writeIndex(indexPath, root); }
+    });
+
+    // per-subreddit progress connections
+    if (sourcesPanel_) {
+        connect(worker, &UpdateWorker::started, sourcesPanel_, &SourcesPanel::startUpdateProgress);
+        connect(worker, &UpdateWorker::finishedSubreddit, sourcesPanel_, &SourcesPanel::finishUpdateProgress);
+    }
+
+    connect(worker, &UpdateWorker::finished, this, [this, t, worker]() {
+        if (btnUpdate_) { btnUpdate_->setEnabled(true); btnUpdate_->setText("Update Library"); }
+        if (thumbnailViewer_) thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
+        if (sourcesPanel_) sourcesPanel_->updateCounts(m_cache.cacheDirPath());
+        t->quit(); worker->deleteLater(); t->deleteLater();
+    });
+
+    connect(t, &QThread::started, worker, &UpdateWorker::start);
     connect(qApp, &QCoreApplication::aboutToQuit, t, &QThread::quit);
     t->start();
 }

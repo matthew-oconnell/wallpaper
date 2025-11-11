@@ -11,6 +11,9 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QFile>
+#include <QLabel>
+#include <QProgressBar>
+#include <QHBoxLayout>
 
 SourcesPanel::SourcesPanel(QWidget *parent)
     : QWidget(parent)
@@ -48,12 +51,7 @@ SourcesPanel::SourcesPanel(QWidget *parent)
         for (int i=0;i<m_list->count();++i) {
             if (m_list->item(i)->data(Qt::UserRole).toString().compare(txt, Qt::CaseInsensitive) == 0) return;
         }
-        auto *it = new QListWidgetItem(txt, m_list);
-        // store the raw subreddit name in UserRole; displayed text can later include counts
-        it->setData(Qt::UserRole, txt);
-        it->setFlags(it->flags() | Qt::ItemIsUserCheckable);
-        it->setCheckState(Qt::Checked);
-        m_list->addItem(it);
+        createListItem(txt, true);
         m_edit->clear();
         QStringList s = sources();
         emit sourcesChanged(s);
@@ -63,6 +61,16 @@ SourcesPanel::SourcesPanel(QWidget *parent)
     connect(m_btnRemove, &QPushButton::clicked, this, [this]() {
         auto items = m_list->selectedItems();
         for (QListWidgetItem *it : items) {
+            QString raw = it->data(Qt::UserRole).toString();
+            if (!raw.isEmpty()) {
+                // clean up maps/widgets
+                if (m_itemWidgets.contains(raw)) {
+                    delete m_itemWidgets.value(raw);
+                    m_itemWidgets.remove(raw);
+                }
+                m_itemLabels.remove(raw);
+                m_itemProgress.remove(raw);
+            }
             delete it;
         }
         QStringList s = sources();
@@ -81,27 +89,77 @@ SourcesPanel::SourcesPanel(QWidget *parent)
     connect(m_list, &QListWidget::customContextMenuRequested, this, [this](const QPoint &pt){
         QListWidgetItem *it = m_list->itemAt(pt);
         if (!it) return;
+        QString raw = it->data(Qt::UserRole).toString();
+        if (raw.isEmpty()) raw = it->text();
         QMenu menu(m_list);
+        QAction *actUpdate10 = menu.addAction("Update 10");
+        QAction *actUpdate50 = menu.addAction("Update 50");
+        QAction *actUpdate100 = menu.addAction("Update 100");
+        menu.addSeparator();
         QAction *actRemove = menu.addAction("Remove");
         QAction *chosen = menu.exec(m_list->viewport()->mapToGlobal(pt));
         if (chosen == actRemove) {
+            // remove associated widgets
+            if (m_itemWidgets.contains(raw)) {
+                delete m_itemWidgets.value(raw);
+                m_itemWidgets.remove(raw);
+            }
+            m_itemLabels.remove(raw);
+            m_itemProgress.remove(raw);
             delete it;
             QStringList s = sources();
             emit sourcesChanged(s);
             emit enabledSourcesChanged(enabledSources());
+        } else if (chosen == actUpdate10) {
+            emit updateRequested(raw, 10);
+        } else if (chosen == actUpdate50) {
+            emit updateRequested(raw, 50);
+        } else if (chosen == actUpdate100) {
+            emit updateRequested(raw, 100);
         }
     });
 }
 
+// Helper to create a list item and its custom widget (label + progress bar)
+void SourcesPanel::createListItem(const QString &raw, bool enabled)
+{
+    auto *it = new QListWidgetItem(raw, m_list);
+    it->setData(Qt::UserRole, raw);
+    it->setFlags(it->flags() | Qt::ItemIsUserCheckable);
+    it->setCheckState(enabled ? Qt::Checked : Qt::Unchecked);
+
+    QWidget *w = new QWidget(m_list);
+    auto *h = new QHBoxLayout(w);
+    h->setContentsMargins(4,2,4,2);
+    QLabel *lbl = new QLabel(raw, w);
+    QProgressBar *p = new QProgressBar(w);
+    p->setRange(0, 100);
+    p->setValue(0);
+    p->setVisible(false);
+    p->setTextVisible(false);
+    h->addWidget(lbl);
+    h->addStretch();
+    h->addWidget(p);
+    w->setLayout(h);
+
+    m_itemWidgets.insert(raw, w);
+    m_itemLabels.insert(raw, lbl);
+    m_itemProgress.insert(raw, p);
+
+    m_list->addItem(it);
+    m_list->setItemWidget(it, w);
+}
+
 void SourcesPanel::setSources(const QStringList &sources)
 {
+    // remove existing widgets
+    for (auto w : m_itemWidgets) delete w;
+    m_itemWidgets.clear();
+    m_itemLabels.clear();
+    m_itemProgress.clear();
     m_list->clear();
     for (const QString &s : sources) {
-        auto *it = new QListWidgetItem(s, m_list);
-        it->setData(Qt::UserRole, s);
-        it->setFlags(it->flags() | Qt::ItemIsUserCheckable);
-        it->setCheckState(Qt::Checked);
-        m_list->addItem(it);
+        createListItem(s, true);
     }
 }
 
@@ -161,21 +219,15 @@ bool SourcesPanel::loadFromFile(const QString &path)
             }
         }
         // now populate list with proper checked state
-        m_list->clear();
         for (auto it = obj.constBegin(); it != obj.constEnd(); ++it) {
             QString key = it.key();
             QJsonValue v = it.value();
-            auto *itw = new QListWidgetItem(key, m_list);
-            // store raw subreddit name in UserRole
-            itw->setData(Qt::UserRole, key);
-            itw->setFlags(itw->flags() | Qt::ItemIsUserCheckable);
             bool enabled = true;
             if (v.isObject()) {
                 QJsonObject entry = v.toObject();
                 if (entry.contains("enabled")) enabled = entry.value("enabled").toBool(true);
             }
-            itw->setCheckState(enabled ? Qt::Checked : Qt::Unchecked);
-            m_list->addItem(itw);
+            createListItem(key, enabled);
         }
     } else {
         return false;
@@ -244,10 +296,58 @@ void SourcesPanel::updateCounts(const QString &cacheDir)
         QString raw = it->data(Qt::UserRole).toString();
         if (raw.isEmpty()) raw = it->text();
         int c = counts.value(raw, 0);
-        if (c > 0) it->setText(QString("%1 (%2)").arg(raw).arg(c));
-        else it->setText(raw);
-        it->setToolTip(raw);
+        QString labelText;
+        if (c > 0) labelText = QString("%1 (%2)").arg(raw).arg(c);
+        else labelText = raw;
+        // update label if we created a custom widget for this raw name
+        if (m_itemLabels.contains(raw)) {
+            m_itemLabels.value(raw)->setText(labelText);
+            // Ensure the underlying QListWidgetItem has a sensible tooltip
+            it->setToolTip(raw);
+        } else {
+            // fallback to modifying the item text
+            if (c > 0) it->setText(QString("%1 (%2)").arg(raw).arg(c));
+            else it->setText(raw);
+            it->setToolTip(raw);
+        }
     }
+}
+
+void SourcesPanel::startUpdateProgress(const QString &subreddit)
+{
+    if (subreddit.isEmpty()) return;
+    if (!m_itemProgress.contains(subreddit)) return;
+    QProgressBar *p = m_itemProgress.value(subreddit);
+    if (!p) return;
+    // indeterminate/progressing
+    p->setRange(0, 0);
+    p->setVisible(true);
+}
+
+void SourcesPanel::setUpdateProgress(const QString &subreddit, int percent)
+{
+    if (subreddit.isEmpty()) return;
+    if (!m_itemProgress.contains(subreddit)) return;
+    QProgressBar *p = m_itemProgress.value(subreddit);
+    if (!p) return;
+    if (percent < 0) {
+        p->setRange(0, 0);
+    } else {
+        if (p->minimum() == 0 && p->maximum() == 0) p->setRange(0, 100);
+        p->setValue(qBound(0, percent, 100));
+    }
+    p->setVisible(true);
+}
+
+void SourcesPanel::finishUpdateProgress(const QString &subreddit)
+{
+    if (subreddit.isEmpty()) return;
+    if (!m_itemProgress.contains(subreddit)) return;
+    QProgressBar *p = m_itemProgress.value(subreddit);
+    if (!p) return;
+    p->setVisible(false);
+    p->setRange(0, 100);
+    p->setValue(0);
 }
 
 // No manual moc include; AUTOMOC will generate the necessary meta-object code.

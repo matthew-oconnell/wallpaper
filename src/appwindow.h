@@ -32,6 +32,7 @@ private slots:
     void onPermaban();
     void onThumbnailPermabanRequested(const QString &imagePath);
     void onUpdateCache();
+    void onUpdateSubredditRequested(const QString &subreddit, int perSubLimit);
     void startCleanup();
     void cleanupFinished();
 
