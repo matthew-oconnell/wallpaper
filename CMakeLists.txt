@@ -10,13 +10,6 @@ set(CMAKE_AUTOUIC ON)
 find_package(Qt6 COMPONENTS Widgets Network Core Gui REQUIRED)
 
 include(FetchContent)
-# Optional: fetch parsec JSON library. It should be available at the provided repo.
-FetchContent_Declare(
-  parsec
-  GIT_REPOSITORY https://github.com/matthew-oconnell/parsec.git
-  GIT_TAG        main
-)
-FetchContent_MakeAvailable(parsec)
 
 add_executable(wallpaper-cpp
   src/main.cpp
