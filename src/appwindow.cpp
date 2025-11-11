@@ -113,15 +113,20 @@ AppWindow::AppWindow(QWidget *parent)
     // ensure config dir path is available for later use
     QString configDir = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/wallpaper";
 
-    // top-level layout
-    QVBoxLayout *l = new QVBoxLayout(this);
+    // top-level layout: left sidebar (sources + filters) and right main area
+    QHBoxLayout *main = new QHBoxLayout(this);
+
+    // left sidebar panel (narrow)
+    QWidget *leftPanel = new QWidget(this);
+    QVBoxLayout *leftLayout = new QVBoxLayout(leftPanel);
+    leftLayout->setContentsMargins(4,4,4,4);
 
     // sources panel (left side) — created early so other init can refer to it
     sourcesPanel_ = new SourcesPanel(this);
     // try to load persisted sources from config (if present)
     QString sourcesPath = configDir + "/sources.json";
     sourcesPanel_->loadFromFile(sourcesPath);
-    l->addWidget(sourcesPanel_);
+    leftLayout->addWidget(sourcesPanel_);
     connect(sourcesPanel_, &SourcesPanel::enabledSourcesChanged, this, [this](const QStringList &enabled){
         if (!thumbnailViewer_) return;
         // update allowed subreddits and reload thumbnails so the filter takes effect immediately
@@ -159,7 +164,14 @@ AppWindow::AppWindow(QWidget *parent)
     // until after the thumbnail viewer is created so the handler can update it safely.
     qDebug() << "AppWindow ctor: creating FiltersPanel (after SourcesPanel)";
     filtersPanel_ = new FiltersPanel(this);
-    l->addWidget(filtersPanel_);
+    leftLayout->addWidget(filtersPanel_);
+    leftLayout->addStretch();
+    leftPanel->setMinimumWidth(260);
+    main->addWidget(leftPanel);
+
+    // right main panel
+    QWidget *rightPanel = new QWidget(this);
+    QVBoxLayout *rightLayout = new QVBoxLayout(rightPanel);
     // load persisted filter mode from config (if present)
     QDir().mkpath(configDir);
     QString configPath = configDir + "/config.json";
@@ -182,8 +194,8 @@ AppWindow::AppWindow(QWidget *parent)
     thumbnailViewer_->setMinimumHeight(300);
     // now apply the current enabled sources to the viewer
     thumbnailViewer_->setAllowedSubreddits(sourcesPanel_->enabledSources());
-    l->addWidget(thumbnailViewer_, 1);
-    qDebug() << "AppWindow ctor: added ThumbnailViewer to layout";
+    rightLayout->addWidget(thumbnailViewer_, 1);
+    qDebug() << "AppWindow ctor: added ThumbnailViewer to right panel";
     // compute primary screen aspect ratio and set it on the thumbnail viewer
     QScreen *screen = QGuiApplication::primaryScreen();
     QSize scrSize = screen ? screen->size() : QSize(1920,1080);
@@ -241,13 +253,14 @@ AppWindow::AppWindow(QWidget *parent)
     btnUpdate_->setToolTip("Fetch new images and update the cache/index");
     btnCleanup_ = new QPushButton("Cleanup Library", this);
     btnCleanup_->setToolTip("Remove cached images whose subreddit is no longer in the sources list");
-    // place buttons on one row
+    // place buttons on one row (will be added to right panel)
     QHBoxLayout *updateRow = new QHBoxLayout();
     updateRow->addWidget(btnUpdate_);
     updateRow->addWidget(btnCleanup_);
-    l->addLayout(updateRow);
     connect(btnUpdate_, &QPushButton::clicked, this, &AppWindow::onUpdateCache);
     connect(btnCleanup_, &QPushButton::clicked, this, &AppWindow::startCleanup);
+    // add the update/cleanup row into the left sidebar so controls are together
+    leftLayout->addLayout(updateRow);
     // initial load of thumbnails deferred until the window is shown to allow correct layout
     connect(thumbnailViewer_, &ThumbnailViewer::imageSelected, this, &AppWindow::onThumbnailSelected);
     // double-click (activate) should set the wallpaper immediately
@@ -282,8 +295,11 @@ AppWindow::AppWindow(QWidget *parent)
     detailLayout->addWidget(detailResolution_);
 
     // no inline favorite / permaban buttons in detail panel; actions are available from thumbnail context menu
-    l->addWidget(detailWidget);
+    rightLayout->addWidget(detailWidget);
     qDebug() << "AppWindow ctor: connected detail panel (no inline action buttons)";
+
+    // finish assembling main layout: add rightPanel to the main HBox
+    main->addWidget(rightPanel, 1);
 
     // tray
     // Use a dice emoji as the tray icon

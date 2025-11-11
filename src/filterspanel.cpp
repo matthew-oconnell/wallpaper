@@ -1,4 +1,5 @@
 #include "filterspanel.h"
+#include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QCheckBox>
@@ -6,15 +7,21 @@
 FiltersPanel::FiltersPanel(QWidget *parent)
     : QWidget(parent), combo_(new QComboBox(this))
 {
-    auto *layout = new QHBoxLayout(this);
+    // vertical layout: aspect selector on first row, favorites checkbox on its own row
+    auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(0,0,0,0);
-    layout->addWidget(new QLabel("Aspect filter:", this));
+
+    auto *h = new QHBoxLayout;
+    h->addWidget(new QLabel("Aspect filter:", this));
     combo_->addItem("All", QVariant::fromValue<int>(ThumbnailViewer::FilterAll));
     combo_->addItem("Exact", QVariant::fromValue<int>(ThumbnailViewer::FilterExact));
     combo_->addItem("Rough", QVariant::fromValue<int>(ThumbnailViewer::FilterRough));
     combo_->setCurrentIndex(0);
-    layout->addWidget(combo_);
+    h->addWidget(combo_);
+    h->addStretch();
+    layout->addLayout(h);
 
+    // favorites-only on its own line
     favOnly_ = new QCheckBox("Favorites only", this);
     layout->addWidget(favOnly_);
     connect(favOnly_, &QCheckBox::toggled, this, [this](bool checked){ emit favoritesOnlyChanged(checked); });
