@@ -20,6 +20,8 @@ public:
     // last-updated timestamps per subreddit (may be null/invalid if never updated)
     QMap<QString, QDateTime> lastUpdatedMap() const;
     void setLastUpdated(const QString &subreddit, const QDateTime &when);
+    // Update displayed per-subreddit cached counts by reading index.json in cacheDir
+    void updateCounts(const QString &cacheDir);
 
     // load/save as a JSON array in a file
     bool loadFromFile(const QString &path);

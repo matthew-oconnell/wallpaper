@@ -13,6 +13,7 @@ class QLabel;
 class QPushButton;
 class QCheckBox;
 class QAction;
+class QSpinBox;
 
 
 class AppWindow : public QWidget {
@@ -43,6 +44,7 @@ private:
     QString currentWallpaperPath_;
     QStringList subscribedSubreddits_ = { "WidescreenWallpaper" };
     QPushButton *btnUpdate_ = nullptr;
+    QSpinBox *updateCountSpin_ = nullptr;
     SourcesPanel *sourcesPanel_ = nullptr;
     FiltersPanel *filtersPanel_ = nullptr;
     // detail panel widgets

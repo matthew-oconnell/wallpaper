@@ -42,11 +42,13 @@ SourcesPanel::SourcesPanel(QWidget *parent)
         if (txt.isEmpty()) return;
         // normalize: remove leading r/ if present
         if (txt.startsWith("r/")) txt = txt.mid(2);
-        // avoid duplicates
+        // avoid duplicates (compare against stored raw names)
         for (int i=0;i<m_list->count();++i) {
-            if (m_list->item(i)->text().compare(txt, Qt::CaseInsensitive) == 0) return;
+            if (m_list->item(i)->data(Qt::UserRole).toString().compare(txt, Qt::CaseInsensitive) == 0) return;
         }
         auto *it = new QListWidgetItem(txt, m_list);
+        // store the raw subreddit name in UserRole; displayed text can later include counts
+        it->setData(Qt::UserRole, txt);
         it->setFlags(it->flags() | Qt::ItemIsUserCheckable);
         it->setCheckState(Qt::Checked);
         m_list->addItem(it);
@@ -78,6 +80,7 @@ void SourcesPanel::setSources(const QStringList &sources)
     m_list->clear();
     for (const QString &s : sources) {
         auto *it = new QListWidgetItem(s, m_list);
+        it->setData(Qt::UserRole, s);
         it->setFlags(it->flags() | Qt::ItemIsUserCheckable);
         it->setCheckState(Qt::Checked);
         m_list->addItem(it);
@@ -87,7 +90,12 @@ void SourcesPanel::setSources(const QStringList &sources)
 QStringList SourcesPanel::sources() const
 {
     QStringList out;
-    for (int i=0;i<m_list->count();++i) out << m_list->item(i)->text();
+    for (int i=0;i<m_list->count();++i) {
+        QListWidgetItem *it = m_list->item(i);
+        QString raw = it->data(Qt::UserRole).toString();
+        if (raw.isEmpty()) raw = it->text();
+        out << raw;
+    }
     return out;
 }
 
@@ -96,7 +104,11 @@ QStringList SourcesPanel::enabledSources() const
     QStringList out;
     for (int i=0;i<m_list->count();++i) {
         QListWidgetItem *it = m_list->item(i);
-        if (it->checkState() == Qt::Checked) out << it->text();
+        if (it->checkState() == Qt::Checked) {
+            QString raw = it->data(Qt::UserRole).toString();
+            if (raw.isEmpty()) raw = it->text();
+            out << raw;
+        }
     }
     return out;
 }
@@ -136,6 +148,8 @@ bool SourcesPanel::loadFromFile(const QString &path)
             QString key = it.key();
             QJsonValue v = it.value();
             auto *itw = new QListWidgetItem(key, m_list);
+            // store raw subreddit name in UserRole
+            itw->setData(Qt::UserRole, key);
             itw->setFlags(itw->flags() | Qt::ItemIsUserCheckable);
             bool enabled = true;
             if (v.isObject()) {
@@ -160,7 +174,8 @@ bool SourcesPanel::saveToFile(const QString &path) const
     // Save as object mapping subreddit-> { enabled: bool, last_updated: string }
     for (int i=0;i<m_list->count();++i) {
         QListWidgetItem *it = m_list->item(i);
-        QString s = it->text();
+        QString s = it->data(Qt::UserRole).toString();
+        if (s.isEmpty()) s = it->text();
         QJsonObject entry;
         entry.insert("enabled", it->checkState() == Qt::Checked);
         if (m_lastUpdated.contains(s)) entry.insert("last_updated", m_lastUpdated.value(s).toString(Qt::ISODate));
@@ -184,6 +199,37 @@ void SourcesPanel::setLastUpdated(const QString &subreddit, const QDateTime &whe
 {
     if (subreddit.isEmpty()) return;
     m_lastUpdated.insert(subreddit, when);
+}
+
+void SourcesPanel::updateCounts(const QString &cacheDir)
+{
+    if (cacheDir.isEmpty()) return;
+    QString indexPath = cacheDir + "/index.json";
+    QFile f(indexPath);
+    QMap<QString,int> counts;
+    if (f.open(QIODevice::ReadOnly)) {
+        QJsonDocument doc = QJsonDocument::fromJson(f.readAll());
+        f.close();
+        if (doc.isObject()) {
+            QJsonObject obj = doc.object();
+            for (auto it = obj.constBegin(); it != obj.constEnd(); ++it) {
+                QJsonObject entry = it.value().toObject();
+                QString sub = entry.value("subreddit").toString();
+                if (!sub.isEmpty()) counts[sub] += 1;
+            }
+        }
+    }
+
+    // Update displayed text for each list item to include count
+    for (int i=0;i<m_list->count();++i) {
+        QListWidgetItem *it = m_list->item(i);
+        QString raw = it->data(Qt::UserRole).toString();
+        if (raw.isEmpty()) raw = it->text();
+        int c = counts.value(raw, 0);
+        if (c > 0) it->setText(QString("%1 (%2)").arg(raw).arg(c));
+        else it->setText(raw);
+        it->setToolTip(raw);
+    }
 }
 
 // No manual moc include; AUTOMOC will generate the necessary meta-object code.

@@ -8,8 +8,10 @@
 #include <QPixmap>
 #include <QPainter>
 #include <QVBoxLayout>
+#include <QHBoxLayout>
 #include <QPushButton>
 #include <QLabel>
+#include <QSpinBox>
 #include <QRandomGenerator>
 #include "redditfetcher.h"
 #include "cachemanager.h"
@@ -41,14 +43,14 @@
 class UpdateWorker : public QObject {
     Q_OBJECT
 public:
-    explicit UpdateWorker(const QStringList &subs, QObject *parent = nullptr)
-        : QObject(parent), subs_(subs) {}
+    explicit UpdateWorker(const QStringList &subs, int count = 100, QObject *parent = nullptr)
+        : QObject(parent), subs_(subs), count_(count) {}
 
 public slots:
     void run() {
         for (const QString &sub : subs_) {
             RedditFetcher rf;
-            std::vector<std::string> urls = rf.fetchRecentImageUrls(sub, 100);
+            std::vector<std::string> urls = rf.fetchRecentImageUrls(sub, count_);
             for (const auto &u : urls) {
                 QString url = QString::fromStdString(u);
                 CacheManager cache;
@@ -65,6 +67,7 @@ signals:
 
 private:
     QStringList subs_;
+    int count_ = 100;
 };
 
 // forward declarations for helpers defined later in this file
@@ -103,11 +106,22 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     connect(btn, &QPushButton::clicked, this, &AppWindow::onNewRandom);
     l->addWidget(btn);
 
+    // Update controls: button + count spin box (how many wallpapers to pull)
+    QHBoxLayout *updateRow = new QHBoxLayout();
     QPushButton *btnUpdate = new QPushButton("Look For New Wallpapers", this);
     qDebug() << "AppWindow ctor: created Update button";
     connect(btnUpdate, &QPushButton::clicked, this, &AppWindow::onUpdateCache);
-    l->addWidget(btnUpdate);
+    updateRow->addWidget(btnUpdate);
     btnUpdate_ = btnUpdate;
+
+    QLabel *lblCount = new QLabel("Count:", this);
+    updateRow->addWidget(lblCount);
+    QSpinBox *spin = new QSpinBox(this);
+    spin->setRange(1, 1000);
+    spin->setValue(100); // default
+    updateRow->addWidget(spin);
+    updateCountSpin_ = spin;
+    l->addLayout(updateRow);
 
     // Add a button to show a random favorited wallpaper
     QPushButton *btnRandFav = new QPushButton("🎲❤️ Random Favorite", this);
@@ -219,6 +233,7 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
         }
         // reload thumbnails from cache so the filter takes effect immediately
         thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
+        if (sourcesPanel_) sourcesPanel_->updateCounts(m_cache.cacheDirPath());
     });
     connect(filtersPanel_, &FiltersPanel::favoritesOnlyChanged, this, [this, configPath](bool favOnly){
         thumbnailViewer_->setFavoritesOnly(favOnly);
@@ -239,6 +254,7 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
             qWarning() << "Failed to write config file:" << configPath;
         }
         thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
+        if (sourcesPanel_) sourcesPanel_->updateCounts(m_cache.cacheDirPath());
     });
     // initial load of thumbnails deferred until the window is shown to allow correct layout
     connect(thumbnailViewer_, &ThumbnailViewer::imageSelected, this, &AppWindow::onThumbnailSelected);
@@ -349,6 +365,7 @@ void AppWindow::showEvent(QShowEvent *event)
         // that the scroll viewport has a valid size and column calculation is correct.
         QTimer::singleShot(0, this, [this]() {
             thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
+            if (sourcesPanel_) sourcesPanel_->updateCounts(m_cache.cacheDirPath());
             // schedule a follow-up relayout after layouts settle to avoid a 1-column flash
             QTimer::singleShot(80, thumbnailViewer_, [this]() {
                 thumbnailViewer_->relayoutGrid();
@@ -623,7 +640,8 @@ void AppWindow::onUpdateCache() {
     // Run update in background thread so UI stays responsive
     btnUpdate_->setEnabled(false);
     QThread *thread = new QThread;
-    UpdateWorker *worker = new UpdateWorker(ordered);
+    int count = updateCountSpin_ ? updateCountSpin_->value() : 100;
+    UpdateWorker *worker = new UpdateWorker(ordered, count);
     worker->moveToThread(thread);
     connect(thread, &QThread::started, worker, &UpdateWorker::run);
     QString configDir = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/wallpaper";
@@ -642,8 +660,9 @@ void AppWindow::onUpdateCache() {
     entry["source_url"] = sourceUrl;
     root[key] = entry;
         writeIndex(indexPath, root);
-        // add thumbnail to viewer incrementally
-        thumbnailViewer_->addThumbnailFromPath(cached);
+    // add thumbnail to viewer incrementally
+    thumbnailViewer_->addThumbnailFromPath(cached);
+    if (sourcesPanel_) sourcesPanel_->updateCounts(m_cache.cacheDirPath());
         // update last-updated for the subreddit and persist
         if (sourcesPanel_) {
             QDateTime now = QDateTime::currentDateTimeUtc();
@@ -654,6 +673,7 @@ void AppWindow::onUpdateCache() {
     connect(worker, &UpdateWorker::finished, this, [this, thread, worker, indexPath](){
         qDebug() << "Background update finished";
         btnUpdate_->setEnabled(true);
+        if (sourcesPanel_) sourcesPanel_->updateCounts(m_cache.cacheDirPath());
         thread->quit();
         worker->deleteLater();
         thread->deleteLater();
