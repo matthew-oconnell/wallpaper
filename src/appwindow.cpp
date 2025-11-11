@@ -136,18 +136,10 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     });
     qDebug() << "AppWindow ctor: connected sourcesChanged";
 
-    // Filtering panel will be created after the thumbnail viewer so we can set the target aspect safely.
-
-    qDebug() << "AppWindow ctor: before ThumbnailViewer";
-    // thumbnail viewer
-    thumbnailViewer_ = new ThumbnailViewer(this);
-    qDebug() << "AppWindow ctor: created ThumbnailViewer";
-    thumbnailViewer_->setMinimumHeight(300);
-    // now apply the current enabled sources to the viewer
-    thumbnailViewer_->setAllowedSubreddits(sourcesPanel_->enabledSources());
-    l->addWidget(thumbnailViewer_, 1);
-    qDebug() << "AppWindow ctor: added ThumbnailViewer to layout";
-    // Filters panel (All / Exact / Rough)
+    // Place the Filters panel after the subreddit list (per user request).
+    // We load the saved filter mode here, but defer wiring the mode-changed handler
+    // until after the thumbnail viewer is created so the handler can update it safely.
+    qDebug() << "AppWindow ctor: creating FiltersPanel (after SourcesPanel)";
     filtersPanel_ = new FiltersPanel(this);
     l->addWidget(filtersPanel_);
     // load persisted filter mode from config (if present)
@@ -163,6 +155,15 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     int savedMode = cfg.value("filter_mode").toInt((int)filtersPanel_->mode());
     filtersPanel_->setMode(static_cast<ThumbnailViewer::AspectFilterMode>(savedMode));
 
+    qDebug() << "AppWindow ctor: before ThumbnailViewer";
+    // thumbnail viewer
+    thumbnailViewer_ = new ThumbnailViewer(this);
+    qDebug() << "AppWindow ctor: created ThumbnailViewer";
+    thumbnailViewer_->setMinimumHeight(300);
+    // now apply the current enabled sources to the viewer
+    thumbnailViewer_->setAllowedSubreddits(sourcesPanel_->enabledSources());
+    l->addWidget(thumbnailViewer_, 1);
+    qDebug() << "AppWindow ctor: added ThumbnailViewer to layout";
     // compute primary screen aspect ratio and set it on the thumbnail viewer
     QScreen *screen = QGuiApplication::primaryScreen();
     QSize scrSize = screen ? screen->size() : QSize(1920,1080);

@@ -387,11 +387,7 @@ bool ThumbnailViewer::acceptsImage(const QString &filePath) const
     if (sz.isEmpty()) return false;
     double ar = double(sz.width()) / double(sz.height());
 
-    // If allowed subreddits configured and we don't have index metadata for this
-    // file, conservatively reject (we don't know its subreddit).
-    if (!m_allowedSubreddits.isEmpty()) {
-        return false;
-    }
+    // (If we reached here we either have metadata or no allowlist; proceed to aspect checks.)
 
     if (m_filterMode == FilterExact) {
         return qAbs(ar - m_targetAspect) <= 0.03;
