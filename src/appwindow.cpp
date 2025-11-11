@@ -110,7 +110,7 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     btnUpdate_ = btnUpdate;
 
     // Add a button to show a random favorited wallpaper
-    QPushButton *btnRandFav = new QPushButton("❤️ Random Favorite", this);
+    QPushButton *btnRandFav = new QPushButton("🎲❤️ Random Favorite", this);
     connect(btnRandFav, &QPushButton::clicked, this, &AppWindow::onRandomFavorite);
     l->addWidget(btnRandFav);
 
@@ -288,9 +288,17 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     // Use a dice emoji as the tray icon
     trayIcon_ = new QSystemTrayIcon(createEmojiIcon(QString::fromUtf8("🎲")), this);
     QMenu *menu = new QMenu();
-    QAction *actNew = new QAction("🎲 New Random Wallpaper", this);
+    // Order: Set Random, Random Favorite, Open, Favorite, Ban, Quit
+    QAction *actNew = new QAction("🎲 Set Random", this);
     connect(actNew, &QAction::triggered, this, &AppWindow::onNewRandom);
     menu->addAction(actNew);
+
+    // There's no single standard "random+heart" emoji, use a small combo that reads well:
+    // "🔀❤️" (shuffle + heart) looks like "random favorite". You can change to "🎲❤️" if you prefer dice+heart.
+    QAction *actRandFav = new QAction("🎲❤️ Random Favorite", this);
+    connect(actRandFav, &QAction::triggered, this, &AppWindow::onRandomFavorite);
+    menu->addAction(actRandFav);
+    trayActRandomFavorite_ = actRandFav;
 
     QAction *actOpen = new QAction("Open", this);
     connect(actOpen, &QAction::triggered, this, [this]() {
@@ -302,23 +310,21 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
         this->setWindowState((this->windowState() & ~Qt::WindowMinimized) | Qt::WindowActive);
     });
     menu->addAction(actOpen);
-    // tray actions for quick votes/ban
-    QAction *actFavorite = new QAction("❤️ Favorite Current", this);
+
+    // Favorite (operates on current wallpaper)
+    QAction *actFavorite = new QAction("❤️ Favorite", this);
     connect(actFavorite, &QAction::triggered, this, &AppWindow::onToggleFavorite);
     actFavorite->setEnabled(false);
     menu->addAction(actFavorite);
     trayActFavorite_ = actFavorite;
 
-    QAction *actRandFav = new QAction("❤️ Random Favorite", this);
-    connect(actRandFav, &QAction::triggered, this, &AppWindow::onRandomFavorite);
-    menu->addAction(actRandFav);
-    trayActRandomFavorite_ = actRandFav;
-
-    QAction *actPermaban = new QAction("💀 Perma-Ban Current Wallpaper", this);
+    // Ban (short label)
+    QAction *actPermaban = new QAction("💀 Ban", this);
     connect(actPermaban, &QAction::triggered, this, &AppWindow::onPermaban);
     actPermaban->setEnabled(false);
     menu->addAction(actPermaban);
     trayActPermaban_ = actPermaban;
+
     QAction *actQuit = new QAction("Quit", this);
     connect(actQuit, &QAction::triggered, QApplication::instance(), &QApplication::quit);
     menu->addSeparator();
