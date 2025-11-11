@@ -6,6 +6,7 @@
 #include <QPixmap>
 #include <QMouseEvent>
 #include <QVBoxLayout>
+#include <QFileInfo>
 
 // Simple clickable QLabel
 class ClickableLabel : public QLabel {
@@ -81,6 +82,9 @@ void ThumbnailViewer::addThumbnail(const QString &filePath, int row, int col)
         emit imageActivated(filePath);
     });
 
+    // store file path on the widget for dedupe checks
+    label->setProperty("filePath", filePath);
+
     m_grid->addWidget(label, row, col);
     m_labels.append(label);
 }
@@ -121,7 +125,21 @@ void ThumbnailViewer::addThumbnailFromPath(const QString &filePath)
     const int columns = 4;
     int row = idx / columns;
     int col = idx % columns;
+    // avoid adding duplicates
+    if (hasThumbnailForFile(filePath)) return;
     addThumbnail(filePath, row, col);
+}
+
+bool ThumbnailViewer::hasThumbnailForFile(const QString &filePath) const
+{
+    QString targetName = QFileInfo(filePath).fileName();
+    for (ClickableLabel *l : m_labels) {
+        QVariant p = l->property("filePath");
+        if (!p.isValid()) continue;
+        QString existing = p.toString();
+        if (QFileInfo(existing).fileName() == targetName) return true;
+    }
+    return false;
 }
 
 #include "thumbnailviewer.moc"

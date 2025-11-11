@@ -12,6 +12,7 @@
 #include "redditfetcher.h"
 #include "cachemanager.h"
 #include "thumbnailviewer.h"
+#include "sourcespanel.h"
 #include <QLabel>
 #include <QPushButton>
 #include <QJsonDocument>
@@ -21,6 +22,8 @@
 #include <QDateTime>
 #include <QFileInfo>
 #include <QThread>
+#include <QStandardPaths>
+#include <QDir>
 #include <functional>
 
 // Worker object to perform subreddit scanning & downloading in a background thread.
@@ -69,6 +72,37 @@ AppWindow::AppWindow(QWidget *parent) : QWidget(parent) {
     connect(btnUpdate, &QPushButton::clicked, this, &AppWindow::onUpdateCache);
     l->addWidget(btnUpdate);
     btnUpdate_ = btnUpdate;
+
+    // Sources panel (manage subreddits)
+    sourcesPanel_ = new SourcesPanel(this);
+    // try to load persisted sources from config dir (~/.config/wallpaper/sources.json)
+    QString configDir = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/wallpaper";
+    QDir().mkpath(configDir);
+    QString sourcesPathConfig = configDir + "/sources.json";
+    QString sourcesPathCache = m_cache.cacheDirPath() + "/sources.json"; // legacy location
+    bool loaded = false;
+    if (QFile::exists(sourcesPathConfig)) {
+        loaded = sourcesPanel_->loadFromFile(sourcesPathConfig);
+    }
+    if (!loaded && QFile::exists(sourcesPathCache)) {
+        // migrate from cache dir if present
+        loaded = sourcesPanel_->loadFromFile(sourcesPathCache);
+        if (loaded) {
+            sourcesPanel_->saveToFile(sourcesPathConfig);
+        }
+    }
+    if (!loaded) {
+        // initialize with default
+        sourcesPanel_->setSources(subscribedSubreddits_);
+    } else {
+        subscribedSubreddits_ = sourcesPanel_->sources();
+    }
+    l->addWidget(sourcesPanel_);
+    connect(sourcesPanel_, &SourcesPanel::sourcesChanged, this, [this, sourcesPathConfig](const QStringList &list){
+        subscribedSubreddits_ = list;
+        // persist to config
+        sourcesPanel_->saveToFile(sourcesPathConfig);
+    });
 
     // thumbnail viewer
     thumbnailViewer_ = new ThumbnailViewer(this);
@@ -228,6 +262,13 @@ void AppWindow::onThumbUp() {
     QString key = QFileInfo(currentSelectedPath_).fileName();
     QString indexPath = m_cache.cacheDirPath() + "/index.json";
     QJsonObject root = readIndex(indexPath);
+
+    // config sources path
+    QString configDir = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/wallpaper";
+    QDir().mkpath(configDir);
+    QString sourcesPath = configDir + "/sources.json";
+
+    // (no-op here)
     QJsonObject entry = root.value(key).toObject();
     int score = entry.value("score").toInt(0);
     score += 1;
@@ -280,14 +321,36 @@ void AppWindow::onUpdateCache() {
     QString indexPath = m_cache.cacheDirPath() + "/index.json";
     QJsonObject root = readIndex(indexPath);
 
+    // Prepare ordered subreddit list: never-updated first, then oldest
+    QStringList allSources = sourcesPanel_ ? sourcesPanel_->sources() : subscribedSubreddits_;
+    QMap<QString,QDateTime> lastMap = sourcesPanel_ ? sourcesPanel_->lastUpdatedMap() : QMap<QString,QDateTime>();
+    QStringList neverUpdated;
+    QVector<QPair<QString,QDateTime>> updated;
+    for (const QString &s : allSources) {
+        if (lastMap.contains(s) && lastMap.value(s).isValid()) {
+            updated.append(qMakePair(s, lastMap.value(s)));
+        } else {
+            neverUpdated.append(s);
+        }
+    }
+    std::sort(updated.begin(), updated.end(), [](const QPair<QString,QDateTime> &a, const QPair<QString,QDateTime> &b){
+        return a.second < b.second;
+    });
+    QStringList ordered;
+    ordered += neverUpdated;
+    for (const auto &p : updated) ordered.append(p.first);
+
     // Run update in background thread so UI stays responsive
     btnUpdate_->setEnabled(false);
     QThread *thread = new QThread;
-    UpdateWorker *worker = new UpdateWorker(subscribedSubreddits_);
+    UpdateWorker *worker = new UpdateWorker(ordered);
     worker->moveToThread(thread);
     connect(thread, &QThread::started, worker, &UpdateWorker::run);
+    QString configDir = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/wallpaper";
+    QDir().mkpath(configDir);
+    QString sourcesPath = configDir + "/sources.json";
     // When worker reports an image cached, update index.json and thumbnail viewer on UI thread
-    connect(worker, &UpdateWorker::imageCached, this, [this, indexPath](const QString &cached, const QString &subreddit, const QString &sourceUrl){
+    connect(worker, &UpdateWorker::imageCached, this, [this, indexPath, sourcesPath](const QString &cached, const QString &subreddit, const QString &sourceUrl){
         // load index
         QJsonObject root = readIndex(indexPath);
         QString key = QFileInfo(cached).fileName();
@@ -301,6 +364,12 @@ void AppWindow::onUpdateCache() {
         writeIndex(indexPath, root);
         // add thumbnail to viewer incrementally
         thumbnailViewer_->addThumbnailFromPath(cached);
+        // update last-updated for the subreddit and persist
+        if (sourcesPanel_) {
+            QDateTime now = QDateTime::currentDateTimeUtc();
+            sourcesPanel_->setLastUpdated(subreddit, now);
+            sourcesPanel_->saveToFile(sourcesPath);
+        }
     });
     connect(worker, &UpdateWorker::finished, this, [this, thread, worker, indexPath](){
         qDebug() << "Background update finished";

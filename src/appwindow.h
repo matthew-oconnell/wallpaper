@@ -5,6 +5,7 @@
 #include "redditfetcher.h"
 #include "cachemanager.h"
 #include "thumbnailviewer.h"
+#include "sourcespanel.h"
 
 class QSystemTrayIcon;
 
@@ -35,6 +36,7 @@ private:
     QString currentSelectedPath_;
     QStringList subscribedSubreddits_ = { "WidescreenWallpaper" };
     QPushButton *btnUpdate_ = nullptr;
+    SourcesPanel *sourcesPanel_ = nullptr;
     // detail panel widgets
     QLabel *detailPath_ = nullptr;
     QLabel *detailSubreddit_ = nullptr;

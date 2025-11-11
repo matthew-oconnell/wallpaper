@@ -30,6 +30,9 @@ signals:
 public slots:
     void refresh();
 
+    // Return true if a thumbnail for the given file path (or filename) already exists in the view
+    bool hasThumbnailForFile(const QString &filePath) const;
+
 private:
     void clearGrid();
     void addThumbnail(const QString &filePath, int row, int col);

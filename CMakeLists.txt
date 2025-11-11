@@ -21,6 +21,8 @@ add_executable(wallpaper-cpp
   src/wallpapersetter.cpp
   src/thumbnailviewer.h
   src/thumbnailviewer.cpp
+  src/sourcespanel.h
+  src/sourcespanel.cpp
 )
 target_link_libraries(wallpaper-cpp PRIVATE Qt6::Widgets Qt6::Network Qt6::Core Qt6::Gui)
 
