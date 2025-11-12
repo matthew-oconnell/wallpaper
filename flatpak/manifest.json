@@ -13,9 +13,8 @@
         "-DCMAKE_INSTALL_PREFIX=/app"
       ],
       "post-install": [
-  "install -Dm644 flatpak/data/wallaroo.desktop /app/share/applications/org.matthew.wallaroo.desktop",
-  "install -Dm644 flatpak/data/icons/128x128.png /app/share/icons/hicolor/128x128/apps/org.matthew.wallaroo.png",
-  "install -Dm644 flatpak/data/icons/64x64.png /app/share/icons/hicolor/64x64/apps/org.matthew.wallaroo.png"
+        "install -Dm644 flatpak/data/wallaroo.desktop /app/share/applications/org.matthew.wallaroo.desktop",
+        "install -Dm644 flatpak/data/icons/wallaroo_icon.png /app/share/icons/hicolor/1024x1024/apps/org.matthew.wallaroo.png"
       ],
       "sources": [
         {
