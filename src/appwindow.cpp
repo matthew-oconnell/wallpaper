@@ -126,9 +126,18 @@ AppWindow::AppWindow(QWidget *parent)
 
     // sources panel (left side) — created early so other init can refer to it
     sourcesPanel_ = new SourcesPanel(this);
-    // try to load persisted sources from config (if present)
+    // ensure config dir exists and try to load persisted sources from config (if present)
+    QDir().mkpath(configDir);
     QString sourcesPath = configDir + "/sources.json";
-    sourcesPanel_->loadFromFile(sourcesPath);
+    bool loadedSources = sourcesPanel_->loadFromFile(sourcesPath);
+    if (!loadedSources) {
+        // initialize with a sensible default set of subreddits on first run
+        QStringList defaults = { "wallpaper", "wallpapers", "wqhd_wallpaper", "WidescreenWallpaper", "BigWallPapers" };
+        sourcesPanel_->setSources(defaults);
+        if (!sourcesPanel_->saveToFile(sourcesPath)) {
+            qWarning() << "Failed to write default sources file:" << sourcesPath;
+        }
+    }
     leftLayout->addWidget(sourcesPanel_);
     connect(sourcesPanel_, &SourcesPanel::enabledSourcesChanged, this, [this](const QStringList &enabled){
         if (!thumbnailViewer_) return;
