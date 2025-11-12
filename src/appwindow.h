@@ -66,4 +66,5 @@ private:
     bool m_initialLoadDone = false;
 protected:
     void showEvent(QShowEvent *event) override;
+    void closeEvent(QCloseEvent *event) override;
 };

@@ -475,6 +475,19 @@ void AppWindow::showEvent(QShowEvent *event)
     }
 }
 
+void AppWindow::closeEvent(QCloseEvent *event)
+{
+    // If we have a tray icon visible, hide the window and keep the app running
+    if (trayIcon_ && trayIcon_->isVisible()) {
+        this->hide();
+        // ignore the close so the process does not exit
+        event->ignore();
+        return;
+    }
+    // otherwise, perform default behavior (will close the app)
+    QWidget::closeEvent(event);
+}
+
 void AppWindow::onTrayActivated(QSystemTrayIcon::ActivationReason reason)
 {
     if (reason == QSystemTrayIcon::Trigger) {
