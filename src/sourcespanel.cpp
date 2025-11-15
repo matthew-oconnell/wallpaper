@@ -70,10 +70,10 @@ SourcesPanel::SourcesPanel(QWidget *parent)
         if (!it) return;
         QString raw = it->data(Qt::UserRole).toString();
         if (raw.isEmpty()) raw = it->text();
-        QMenu menu(m_list);
-        QAction *actUpdate10 = menu.addAction("Update 10");
-        QAction *actUpdate50 = menu.addAction("Update 50");
-        QAction *actUpdate100 = menu.addAction("Update 100");
+    QMenu menu(m_list);
+    QAction *actUpdate10 = menu.addAction("Scan last 10 posts");
+    QAction *actUpdate50 = menu.addAction("Scan last 50 posts");
+    QAction *actUpdate100 = menu.addAction("Scan last 100 posts");
         menu.addSeparator();
         QAction *actRemove = menu.addAction("Remove");
         QAction *chosen = menu.exec(m_list->viewport()->mapToGlobal(pt));

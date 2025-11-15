@@ -54,6 +54,7 @@ private:
     // Auto-random wallpaper controls
     QSpinBox *autoIntervalSpin_ = nullptr;
     QComboBox *autoIntervalUnit_ = nullptr;
+    QCheckBox *autoStartCheck_ = nullptr;
     QTimer *autoTimer_ = nullptr;
     SourcesPanel *sourcesPanel_ = nullptr;
     FiltersPanel *filtersPanel_ = nullptr;

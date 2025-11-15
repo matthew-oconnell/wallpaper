@@ -1,6 +1,7 @@
 #include "appwindow.h"
 
 #include <QApplication>
+#include <QCloseEvent>
 #include <QIcon>
 #include <QMenu>
 #include <QSystemTrayIcon>
@@ -262,9 +263,9 @@ AppWindow::AppWindow(QWidget *parent)
         if (sourcesPanel_) sourcesPanel_->updateCounts(m_cache.cacheDirPath());
     });
     
-    // Manual update and cleanup controls (restore deleted control):
-    btnUpdate_ = new QPushButton("Update Library", this);
-    btnUpdate_->setToolTip("Fetch new images and update the cache/index");
+    // Manual scan and cleanup controls (restore deleted control):
+    btnUpdate_ = new QPushButton("Scan Now", this);
+    btnUpdate_->setToolTip("Scan for new images and update the cache/index");
     btnCleanup_ = new QPushButton("Cleanup Library", this);
     btnCleanup_->setToolTip("Remove images leftover from deleted subreddits");
     // place buttons on one row (will be added to right panel)
@@ -301,6 +302,70 @@ AppWindow::AppWindow(QWidget *parent)
     leftLayout->addLayout(autoRow);
 
     leftLayout->addLayout(updateRow);
+
+    // Auto-start on login control
+    autoStartCheck_ = new QCheckBox("Automatically start on startup", this);
+    bool savedAutoStart = cfg.value("auto_start").toBool(false);
+    autoStartCheck_->setChecked(savedAutoStart);
+    leftLayout->addWidget(autoStartCheck_);
+
+    // helper to create/remove autostart desktop file
+    auto applyAutoStart = [this, configPath](bool enabled) {
+        // persist selection atomically
+        QJsonObject newCfg;
+        QFile rcf(configPath);
+        if (rcf.open(QIODevice::ReadOnly)) {
+            QJsonDocument doc = QJsonDocument::fromJson(rcf.readAll());
+            if (doc.isObject()) newCfg = doc.object();
+            rcf.close();
+        }
+        newCfg["auto_start"] = enabled;
+        QSaveFile sf(configPath);
+        if (sf.open(QIODevice::WriteOnly)) {
+            sf.write(QJsonDocument(newCfg).toJson(QJsonDocument::Indented));
+            sf.commit();
+        } else {
+            qWarning() << "Failed to write config file:" << configPath;
+        }
+
+        // create or remove autostart desktop entry
+        QString autostartDir = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + "/autostart";
+        QDir().mkpath(autostartDir);
+        QString desktopFile = autostartDir + "/org.matthew.wallaroo.desktop";
+        if (enabled) {
+            QString execLine;
+            // If running inside Flatpak, use flatpak run for the autostart entry
+            if (QFile::exists("/.flatpak-info")) {
+                execLine = QString("flatpak run %1").arg("org.matthew.wallaroo");
+            } else {
+                execLine = QCoreApplication::applicationFilePath();
+            }
+            QFile f(desktopFile);
+            if (f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+                QTextStream ts(&f);
+                ts << "[Desktop Entry]\n";
+                ts << "Type=Application\n";
+                ts << "Version=1.0\n";
+                ts << "Name=Wallaroo\n";
+                ts << "Exec=" << execLine << "\n";
+                ts << "X-GNOME-Autostart-enabled=true\n";
+                ts << "NoDisplay=false\n";
+                ts << "Comment=Start Wallaroo on login\n";
+                f.close();
+            } else {
+                qWarning() << "Failed to create autostart desktop file:" << desktopFile;
+            }
+        } else {
+            if (QFile::exists(desktopFile)) {
+                if (!QFile::remove(desktopFile)) {
+                    qWarning() << "Failed to remove autostart desktop file:" << desktopFile;
+                }
+            }
+        }
+    };
+    connect(autoStartCheck_, &QCheckBox::toggled, this, applyAutoStart);
+    // apply saved value at startup to ensure autostart file is present/absent
+    applyAutoStart(savedAutoStart);
 
     // timer for automatic random wallpaper selection
     autoTimer_ = new QTimer(this);
@@ -407,8 +472,10 @@ AppWindow::AppWindow(QWidget *parent)
     main->addWidget(rightPanel, 1);
 
     // tray
-    // Use a dice emoji as the tray icon
-    trayIcon_ = new QSystemTrayIcon(createEmojiIcon(QString::fromUtf8("🎲")), this);
+    // Use a themed dice icon for the tray when available, otherwise fallback to emoji rendering
+    QIcon themeTrayIcon = QIcon::fromTheme("org.matthew.wallaroo-dice");
+    if (themeTrayIcon.isNull()) themeTrayIcon = createEmojiIcon(QString::fromUtf8("🎲"));
+    trayIcon_ = new QSystemTrayIcon(themeTrayIcon, this);
     QMenu *menu = new QMenu();
     // Order: Set Random, Random Favorite, Open, Favorite, Ban, Quit
     QAction *actNew = new QAction("🎲 Set Random", this);
@@ -855,7 +922,7 @@ void AppWindow::onUpdateCache() {
     connect(worker, &UpdateWorker::finished, this, [this, t, worker](){
         if (btnUpdate_) {
             btnUpdate_->setEnabled(true);
-            btnUpdate_->setText("Update");
+            btnUpdate_->setText("Scan Now");
         }
         // refresh thumbnails and counts
         if (thumbnailViewer_) thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
@@ -878,7 +945,7 @@ void AppWindow::onUpdateSubredditRequested(const QString &subreddit, int perSubL
     if (subreddit.isEmpty()) return;
     if (!btnUpdate_) return;
     btnUpdate_->setEnabled(false);
-    btnUpdate_->setText(QString("Updating %1...").arg(subreddit));
+    btnUpdate_->setText(QString("Scanning %1...").arg(subreddit));
 
     QStringList subs; subs << subreddit;
     UpdateWorker *worker = new UpdateWorker(&m_fetcher, &m_cache, subs, perSubLimit);
@@ -921,7 +988,7 @@ void AppWindow::onUpdateSubredditRequested(const QString &subreddit, int perSubL
     }
 
     connect(worker, &UpdateWorker::finished, this, [this, t, worker]() {
-        if (btnUpdate_) { btnUpdate_->setEnabled(true); btnUpdate_->setText("Update Library"); }
+        if (btnUpdate_) { btnUpdate_->setEnabled(true); btnUpdate_->setText("Scan Now"); }
         if (thumbnailViewer_) thumbnailViewer_->loadFromCache(m_cache.cacheDirPath());
         if (filtersPanel_) filtersPanel_->setAvailableResolutions(thumbnailViewer_->availableResolutions());
         if (sourcesPanel_) sourcesPanel_->updateCounts(m_cache.cacheDirPath());
